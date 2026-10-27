@@ -1,5 +1,6 @@
-"""Small PayPal REST client for the sandbox. Only reads for now."""
+"""Small PayPal REST client for the sandbox."""
 
+import json
 import os
 
 import httpx
@@ -51,6 +52,16 @@ class PayPalClient:
 
     def get_dispute(self, dispute_id: str) -> dict:
         return self._get(f"/v1/customer/disputes/{dispute_id}")
+
+    def provide_evidence(self, dispute_id: str, evidences: list[dict]) -> dict:
+        resp = self._http.post(
+            f"/v1/customer/disputes/{dispute_id}/provide-evidence",
+            headers=self._headers(),
+            files={"input": (None, json.dumps({"evidences": evidences}), "application/json")},
+        )
+        if resp.status_code >= 400:
+            raise RuntimeError(f"PayPal refused the evidence ({resp.status_code}): {resp.text}")
+        return resp.json()
 
     def list_trackers(self, transaction_id: str) -> list[dict]:
         return self._get("/v1/shipping/trackers", {"transaction_id": transaction_id}).get(

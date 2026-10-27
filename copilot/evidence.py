@@ -44,6 +44,10 @@ class DisputeCase:
     buyer_claims: list[str]
     requested_from_seller: list[str]
     evidence: list[Evidence] = field(default_factory=list)
+    actions: list[str] = field(
+        default_factory=list
+    )  # what PayPal allows now, e.g. provide_evidence
+    shipments: list[dict] = field(default_factory=list)  # {"carrier", "tracking_number"}
 
 
 def money(m: dict) -> str:
@@ -147,4 +151,10 @@ def build_case(d: dict, trackers: list[dict] | None = None) -> DisputeCase:
         buyer_claims=claims,
         requested_from_seller=requested,
         evidence=evidence_from_dispute(d, trackers),
+        actions=[link["rel"] for link in d.get("links", []) if link.get("rel") != "self"],
+        shipments=[
+            {"carrier": t["carrier"], "tracking_number": t["tracking_number"]}
+            for t in trackers or []
+            if t.get("shipment_direction", "FORWARD") == "FORWARD"
+        ],
     )
