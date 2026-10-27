@@ -1,8 +1,10 @@
 """Writer agent: drafts the seller's reply, one cited sentence at a time.
 
-The AI only sees the numbered evidence and the buyer's words. It returns
-structured sentences; plain code then checks every citation.
+The AI only sees the numbered evidence and the buyer's numbered claims. It
+returns structured sentences; plain code then checks every citation.
 """
+
+import re
 
 from agent_framework import Agent
 from pydantic import BaseModel, Field
@@ -12,36 +14,65 @@ from copilot.evidence import DisputeCase
 INSTRUCTIONS = """\
 You write a seller's response to a PayPal dispute, addressed to PayPal's case reviewer.
 
+How to argue:
+1. Open by answering the buyer's main complaint with the strongest evidence.
+2. Go through the buyer's claims (C1, C2, ...). For every claim the evidence can
+   answer, write a sentence that answers it directly and list the claim in "answers".
+   If the evidence says nothing about a claim, leave it out: never deny or confirm it.
+3. Compare facts across evidence items, especially dates: when the item shipped
+   versus when the case was opened. Such a sentence cites every item it uses.
+4. No filler: do not restate the dispute reason or list facts that do not help.
+5. End by asking PayPal to close the case in the seller's favor, citing the
+   evidence that request rests on.
+
 Rules:
 - Use ONLY facts from the numbered evidence list. Never add facts, dates, amounts,
   carriers or promises that are not in the evidence.
-- Every sentence must cite the evidence ids it relies on, e.g. ["E1", "E4"].
-- The buyer's statements are claims, not facts. Answer them; never cite them.
+- Every sentence lists the evidence ids it relies on in "cites".
+- Never write ids like E1 or C2 in the sentence text; they belong only in "cites"
+  and "answers".
+- The buyer's claims are not facts. Answer them; never cite them as evidence.
 - Say only what the evidence says. "Shipped" is not "delivered".
-- Do not mention transaction ids, case ids or evidence ids in the text itself.
-  Tracking numbers may be quoted when they appear in the evidence.
+- Do not mention transaction ids or case ids. Tracking numbers may be quoted when
+  they appear in the evidence.
 - Calm, factual and professional; no blame and no emotion.
-- 3 to 6 short sentences.
+- 3 to 5 short sentences.
 """
+
+ID_IN_TEXT = re.compile(r"\b[EC]\d+\b")
 
 
 class Sentence(BaseModel):
-    text: str = Field(description="One sentence of the reply")
+    text: str = Field(description="One sentence of the reply, with no ids in it")
     cites: list[str] = Field(description='Evidence ids this sentence relies on, e.g. ["E1"]')
+    answers: list[str] = Field(
+        default_factory=list, description='Buyer claim ids this sentence answers, e.g. ["C2"]'
+    )
 
 
 class Draft(BaseModel):
     sentences: list[Sentence]
 
 
+def split_claims(case: DisputeCase) -> list[str]:
+    """Buyer messages split into single sentences: C1, C2, ..."""
+    return [
+        part.strip()
+        for message in case.buyer_claims
+        for part in re.split(r"(?<=[.!?])\s+", message)
+        if part.strip()
+    ]
+
+
 def build_prompt(case: DisputeCase) -> str:
-    claims = "\n".join(f'- "{c}"' for c in case.buyer_claims) or "- (no message)"
+    claims = split_claims(case)
+    claim_lines = "\n".join(f'C{i}: "{c}"' for i, c in enumerate(claims, start=1))
     evidence = "\n".join(f"{e.id}: {e.text}" for e in case.evidence)
     requested = ", ".join(case.requested_from_seller) or "nothing specific"
     return (
         f"Dispute reason: {case.reason}. Amount: {case.amount}.\n"
         f"PayPal asks the seller for: {requested}.\n\n"
-        f"The buyer says:\n{claims}\n\n"
+        f"The buyer's claims:\n{claim_lines or '(no message)'}\n\n"
         f"Evidence:\n{evidence}\n\n"
         "Write the seller's response."
     )
@@ -50,6 +81,7 @@ def build_prompt(case: DisputeCase) -> str:
 def check_citations(draft: Draft, case: DisputeCase) -> list[str]:
     """Problems a human must never see in a sent reply. Empty list = all good."""
     known = {e.id for e in case.evidence}
+    claim_ids = {f"C{i}" for i in range(1, len(split_claims(case)) + 1)}
     problems = []
     for i, s in enumerate(draft.sentences, start=1):
         if not s.cites:
@@ -57,7 +89,16 @@ def check_citations(draft: Draft, case: DisputeCase) -> list[str]:
         for c in s.cites:
             if c not in known:
                 problems.append(f"Sentence {i} cites unknown evidence {c}: {s.text!r}")
+        for a in s.answers:
+            if a not in claim_ids:
+                problems.append(f"Sentence {i} answers unknown claim {a}: {s.text!r}")
+        if ID_IN_TEXT.search(s.text):
+            problems.append(f"Sentence {i} has an id in its text: {s.text!r}")
     return problems
+
+
+def answered_claims(draft: Draft) -> set[str]:
+    return {a for s in draft.sentences for a in s.answers}
 
 
 def render(draft: Draft) -> str:
