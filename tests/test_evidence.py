@@ -1,7 +1,7 @@
 import json
 from pathlib import Path
 
-from copilot.evidence import build_case, day
+from copilot.evidence import build_case, day, gather_case
 
 FIXTURE = Path(__file__).parent / "fixtures" / "dispute_not_received.json"
 
@@ -45,3 +45,38 @@ def test_no_protection_fact_when_not_eligible():
 
 def test_day_formats_utc_dates():
     assert day("2026-11-16T00:29:15.329Z") == "Nov 16, 2026 (UTC)"
+
+
+TRACKERS = Path(__file__).parent / "fixtures" / "trackers.json"
+
+
+def test_tracking_becomes_shipping_evidence():
+    ev = build_case(load(), json.loads(TRACKERS.read_text())).evidence
+    shipped = [e for e in ev if "shipped" in e.text]
+    assert len(shipped) == 1
+    assert shipped[0].text == (
+        "The item was shipped via USPS on Oct 27, 2026, tracking number "
+        "9400111899561234567890 (PayPal tracking status: SHIPPED)."
+    )
+    assert shipped[0].source.startswith("PayPal tracking record")
+    assert [e.id for e in ev] == ["E1", "E2", "E3", "E4", "E5"]
+
+
+def test_return_shipments_are_not_seller_shipping_evidence():
+    trackers = json.loads(TRACKERS.read_text())
+    trackers[0]["shipment_direction"] = "RETURN"
+    assert not any("shipped" in e.text for e in build_case(load(), trackers).evidence)
+
+
+class FakePayPal:
+    def get_dispute(self, dispute_id):
+        return load()
+
+    def list_trackers(self, txn):
+        assert txn == "84G53576J4545811V"
+        return json.loads(TRACKERS.read_text())
+
+
+def test_gather_case_fetches_trackers_for_the_seller_transaction():
+    case = gather_case(FakePayPal(), "PP-R-FOD-10194708")
+    assert any("USPS" in e.text for e in case.evidence)

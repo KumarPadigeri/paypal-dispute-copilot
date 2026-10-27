@@ -56,7 +56,22 @@ def day(iso: str) -> str:
     return f"{dt:%b} {dt.day}, {dt.year} (UTC)"
 
 
-def evidence_from_dispute(d: dict) -> list[Evidence]:
+def shipment_day(date: str) -> str:
+    """'2026-10-27' -> 'Oct 27, 2026'."""
+    dt = datetime.fromisoformat(date)
+    return f"{dt:%b} {dt.day}, {dt.year}"
+
+
+def tracker_fact(t: dict) -> tuple[str, str]:
+    text = (
+        f"The item was shipped via {t['carrier']}"
+        + (f" on {shipment_day(t['shipment_date'])}" if t.get("shipment_date") else "")
+        + f", tracking number {t['tracking_number']} (PayPal tracking status: {t['status']})."
+    )
+    return text, f"PayPal tracking record {t['transaction_id']}-{t['tracking_number']}"
+
+
+def evidence_from_dispute(d: dict, trackers: list[dict] | None = None) -> list[Evidence]:
     facts: list[tuple[str, str]] = []
     src = f"PayPal dispute {d['dispute_id']}"
 
@@ -81,6 +96,10 @@ def evidence_from_dispute(d: dict) -> list[Evidence]:
         if t.get("seller_protection_eligible") and protection:
             facts.append((f"PayPal marks this payment as eligible for {protection}.", txn_src))
 
+    for tr in trackers or []:
+        if tr.get("shipment_direction", "FORWARD") == "FORWARD":
+            facts.append(tracker_fact(tr))
+
     facts.append(
         (
             f"The buyer opened the case on {day(d['create_time'])}, "
@@ -92,7 +111,22 @@ def evidence_from_dispute(d: dict) -> list[Evidence]:
     return [Evidence(f"E{i}", text, source) for i, (text, source) in enumerate(facts, start=1)]
 
 
-def build_case(d: dict) -> DisputeCase:
+def seller_transaction_ids(d: dict) -> list[str]:
+    return [
+        t["seller_transaction_id"]
+        for t in d.get("disputed_transactions", [])
+        if t.get("seller_transaction_id")
+    ]
+
+
+def gather_case(pp, dispute_id: str) -> DisputeCase:
+    """Fetch the dispute and its shipment trackers from PayPal, then build the case."""
+    d = pp.get_dispute(dispute_id)
+    trackers = [tr for txn in seller_transaction_ids(d) for tr in pp.list_trackers(txn)]
+    return build_case(d, trackers)
+
+
+def build_case(d: dict, trackers: list[dict] | None = None) -> DisputeCase:
     claims = [
         m["content"].strip()
         for m in d.get("messages", [])
@@ -112,5 +146,5 @@ def build_case(d: dict) -> DisputeCase:
         respond_by=day(due) if due else None,
         buyer_claims=claims,
         requested_from_seller=requested,
-        evidence=evidence_from_dispute(d),
+        evidence=evidence_from_dispute(d, trackers),
     )

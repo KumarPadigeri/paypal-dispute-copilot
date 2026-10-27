@@ -1,0 +1,13 @@
+[
+  {
+    "transaction_id": "84G53576J4545811V",
+    "tracking_number": "9400111899561234567890",
+    "tracking_number_type": "CARRIER_PROVIDED",
+    "status": "SHIPPED",
+    "shipment_date": "2026-10-27",
+    "carrier": "USPS",
+    "notify_buyer": false,
+    "shipment_direction": "FORWARD",
+    "shipment_uploader": "MERCHANT"
+  }
+]

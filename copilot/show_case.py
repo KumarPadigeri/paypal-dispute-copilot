@@ -6,7 +6,7 @@ Run: .venv/bin/python -m copilot.show_case            (lists disputes)
 
 import sys
 
-from copilot.evidence import build_case
+from copilot.evidence import gather_case
 from copilot.paypal_client import PayPalClient
 
 
@@ -17,7 +17,7 @@ def main() -> None:
             print(f"{d['dispute_id']}  {d['status']}  {d['reason']}")
         return
 
-    case = build_case(pp.get_dispute(sys.argv[1]))
+    case = gather_case(pp, sys.argv[1])
     print(f"{case.dispute_id}: {case.reason}, {case.amount}, {case.status}")
     print(f"Respond by: {case.respond_by}")
     print(f"PayPal asks the seller for: {', '.join(case.requested_from_seller) or 'nothing yet'}")
