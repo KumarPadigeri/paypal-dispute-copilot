@@ -2,7 +2,7 @@
 
 ## Goal
 Build an AI + PayPal project for the PayPal AI Hackathon (https://paypalaihackathon.devpost.com/).
-Submissions close **Nov 12, 2026**; aim to submit **Nov 11**. Winners Dec 21.
+Submissions close **Nov 12, 2026, 12:00 pm Pacific (noon)**; aim to submit **Nov 11**. Winners Dec 21.
 Full brief (idea, architecture, stack, plan, checklist, open questions):
 https://claude.ai/artifact/AeBrcqJzSunXyAwy9GZzSv — read it with the Claude Docs tools before starting.
 
