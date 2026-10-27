@@ -78,23 +78,26 @@ def build_prompt(case: DisputeCase) -> str:
     )
 
 
-def check_citations(draft: Draft, case: DisputeCase) -> list[str]:
-    """Problems a human must never see in a sent reply. Empty list = all good."""
+def sentence_problems(s: Sentence, case: DisputeCase) -> list[str]:
     known = {e.id for e in case.evidence}
     claim_ids = {f"C{i}" for i in range(1, len(split_claims(case)) + 1)}
     problems = []
-    for i, s in enumerate(draft.sentences, start=1):
-        if not s.cites:
-            problems.append(f"Sentence {i} cites no evidence: {s.text!r}")
-        for c in s.cites:
-            if c not in known:
-                problems.append(f"Sentence {i} cites unknown evidence {c}: {s.text!r}")
-        for a in s.answers:
-            if a not in claim_ids:
-                problems.append(f"Sentence {i} answers unknown claim {a}: {s.text!r}")
-        if ID_IN_TEXT.search(s.text):
-            problems.append(f"Sentence {i} has an id in its text: {s.text!r}")
+    if not s.cites:
+        problems.append("cites no evidence")
+    problems += [f"cites unknown evidence {c}" for c in s.cites if c not in known]
+    problems += [f"answers unknown claim {a}" for a in s.answers if a not in claim_ids]
+    if ID_IN_TEXT.search(s.text):
+        problems.append("has an id in its text")
     return problems
+
+
+def check_citations(draft: Draft, case: DisputeCase) -> list[str]:
+    """Problems a human must never see in a sent reply. Empty list = all good."""
+    return [
+        f"Sentence {i} {p}: {s.text!r}"
+        for i, s in enumerate(draft.sentences, start=1)
+        for p in sentence_problems(s, case)
+    ]
 
 
 def answered_claims(draft: Draft) -> set[str]:
@@ -109,6 +112,7 @@ def make_writer(client) -> Agent:
     return Agent(client, INSTRUCTIONS, name="Writer")
 
 
-async def write_draft(writer: Agent, case: DisputeCase) -> Draft:
-    result = await writer.run(build_prompt(case), options={"response_format": Draft})
+async def write_draft(writer: Agent, case: DisputeCase, feedback: str | None = None) -> Draft:
+    prompt = build_prompt(case) + (f"\n\n{feedback}" if feedback else "")
+    result = await writer.run(prompt, options={"response_format": Draft})
     return result.value
