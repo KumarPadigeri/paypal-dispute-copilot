@@ -33,3 +33,34 @@ export const formatMoney = (m: Money | null) =>
 
 export const formatDate = (iso: string | null) =>
   iso ? new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : ''
+
+export type Evidence = { id: string; text: string; source: string }
+export type Claim = { id: string; text: string }
+
+export type CaseDetail = {
+  dispute_id: string
+  reason: string
+  amount: string // e.g. "49.99 USD"
+  status: string
+  respond_by: string | null
+  requested_from_seller: string[]
+  evidence: Evidence[]
+  claims: Claim[]
+  actions: string[]
+  shipments: { carrier: string; tracking_number: string }[]
+}
+
+export const getCase = (id: string) => getJson<CaseDetail>(`/api/disputes/${encodeURIComponent(id)}`)
+
+// What PayPal asks the seller for, in plain words.
+export const REQUESTED: Record<string, string> = {
+  PROOF_OF_FULFILLMENT: 'Proof of shipping',
+  PROOF_OF_REFUND: 'Proof of refund',
+  PROOF_OF_DELIVERY_SIGNATURE: 'Delivery signature',
+  ITEM_DESCRIPTION: 'Item description',
+}
+
+export const formatAmount = (amount: string) => {
+  const [value, currency] = amount.split(' ')
+  return formatMoney({ value, currency_code: currency })
+}

@@ -177,3 +177,155 @@ button {
   color: var(--bad);
   border-color: rgba(227, 154, 154, 0.35);
 }
+
+/* Case view */
+.back {
+  background: none;
+  border: none;
+  color: var(--muted);
+  padding: 0;
+  margin-bottom: 16px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.back:hover {
+  color: var(--text);
+}
+
+.case-head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 4px 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 18px 20px;
+  margin-bottom: 16px;
+}
+
+.case-head h2 {
+  font-size: 20px;
+  font-weight: 600;
+  margin: 0 0 2px;
+  letter-spacing: -0.01em;
+}
+
+.case-head .meta {
+  color: var(--muted);
+  font-size: 13px;
+  margin: 0;
+}
+
+.case-head-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+}
+
+.case-amount {
+  font-size: 20px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.asks {
+  grid-column: 1 / -1;
+  margin: 10px 0 0;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.asks strong {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.columns {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr);
+  gap: 16px;
+}
+
+@media (max-width: 860px) {
+  .columns {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 18px 20px;
+}
+
+.items {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.item {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 12px;
+  align-items: start;
+}
+
+.badge {
+  font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--accent);
+  background: var(--accent-soft);
+  border-radius: 6px;
+  padding: 1px 7px;
+  margin-top: 1px;
+}
+
+.badge.claim {
+  color: var(--muted);
+  background: var(--surface-2);
+}
+
+.source {
+  display: block;
+  color: var(--faint);
+  font-size: 12px;
+  margin-top: 2px;
+  overflow-wrap: anywhere;
+}
+
+.hint {
+  color: var(--faint);
+  font-size: 12px;
+  margin: 16px 0 0;
+}
+
+.nowrap {
+  white-space: nowrap;
+}
+
+.case-head .mono {
+  white-space: nowrap;
+}
+
+@media (max-width: 600px) {
+  .case-head {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .case-head-right {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 8px;
+  }
+}

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import CaseView from './CaseView'
 import { type DisputeSummary, formatDate, formatMoney, listDisputes, statusOf } from './api'
 
 const needsReply = (d: DisputeSummary) => Number(d.status === 'WAITING_FOR_SELLER_RESPONSE')
@@ -40,8 +41,20 @@ function DisputeList({ onOpen }: { onOpen: (id: string) => void }) {
   )
 }
 
+// Tiny hash router: "#/case/<id>" opens a case, anything else shows the list.
+const caseIdFromHash = () => {
+  const m = location.hash.match(/^#\/case\/(.+)$/)
+  return m ? decodeURIComponent(m[1]) : null
+}
+
 export default function App() {
-  const [openId, setOpenId] = useState<string | null>(null)
+  const [openId, setOpenId] = useState<string | null>(caseIdFromHash)
+
+  useEffect(() => {
+    const onHash = () => setOpenId(caseIdFromHash())
+    window.addEventListener('hashchange', onHash)
+    return () => window.removeEventListener('hashchange', onHash)
+  }, [])
 
   return (
     <div className="app">
@@ -50,9 +63,14 @@ export default function App() {
         <h1>Dispute Copilot</h1>
         <span className="tag">PayPal sandbox</span>
       </header>
-      <h2 className="section-title">Disputes</h2>
-      <DisputeList onOpen={setOpenId} />
-      {openId && <p className="meta">Selected {openId} (case view comes next)</p>}
+      {openId ? (
+        <CaseView id={openId} onBack={() => (location.hash = '')} />
+      ) : (
+        <>
+          <h2 className="section-title">Disputes</h2>
+          <DisputeList onOpen={(id) => (location.hash = `/case/${encodeURIComponent(id)}`)} />
+        </>
+      )}
     </div>
   )
 }
