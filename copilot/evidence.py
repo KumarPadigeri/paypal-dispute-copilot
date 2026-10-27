@@ -1,0 +1,116 @@
+"""Turn PayPal data into numbered evidence items.
+
+Plain code, no AI: every fact the reply may cite is built here from PayPal's
+own data. Buyer statements are kept apart as claims; they are what the reply
+answers, never proof.
+"""
+
+from dataclasses import dataclass, field
+from datetime import datetime
+
+REASONS = {
+    "MERCHANDISE_OR_SERVICE_NOT_RECEIVED": "Item not received",
+    "MERCHANDISE_OR_SERVICE_NOT_AS_DESCRIBED": "Item not as described",
+    "UNAUTHORISED": "Unauthorized payment",
+    "DUPLICATE_TRANSACTION": "Duplicate payment",
+    "INCORRECT_AMOUNT": "Incorrect amount",
+    "CREDIT_NOT_PROCESSED": "Refund not processed",
+    "CANCELED_RECURRING_BILLING": "Canceled subscription still billed",
+    "PAYMENT_BY_OTHER_MEANS": "Paid by other means",
+    "OTHER": "Other",
+}
+
+PROTECTION = {
+    "ITEM_NOT_RECEIVED_ELIGIBLE": "Seller Protection (item not received)",
+    "UNAUTHORIZED_PAYMENT_ELIGIBLE": "Seller Protection (unauthorized payment)",
+    "EXPANDED_SELLER_PROTECTION": "Expanded Seller Protection",
+}
+
+
+@dataclass(frozen=True)
+class Evidence:
+    id: str  # "E1", "E2", ... what the Writer cites
+    text: str  # one plain-English fact
+    source: str  # where it came from, for the merchant to inspect
+
+
+@dataclass(frozen=True)
+class DisputeCase:
+    dispute_id: str
+    reason: str
+    amount: str
+    status: str
+    respond_by: str | None
+    buyer_claims: list[str]
+    requested_from_seller: list[str]
+    evidence: list[Evidence] = field(default_factory=list)
+
+
+def money(m: dict) -> str:
+    return f"{m['value']} {m['currency_code']}"
+
+
+def day(iso: str) -> str:
+    """'2026-10-27T00:24:24.000Z' -> 'Oct 27, 2026 (UTC)'."""
+    dt = datetime.fromisoformat(iso.replace("Z", "+00:00"))
+    return f"{dt:%b} {dt.day}, {dt.year} (UTC)"
+
+
+def evidence_from_dispute(d: dict) -> list[Evidence]:
+    facts: list[tuple[str, str]] = []
+    src = f"PayPal dispute {d['dispute_id']}"
+
+    for t in d.get("disputed_transactions", []):
+        txn_src = f"PayPal transaction {t.get('seller_transaction_id', '?')}"
+        facts.append(
+            (
+                f"Payment of {money(t['gross_amount'])} was made on {day(t['create_time'])}.",
+                txn_src,
+            )
+        )
+        for item in t.get("items", []):
+            kind = "physical product" if item.get("item_type") == "PRODUCT" else "item"
+            facts.append(
+                (
+                    f"The order contained {item.get('item_quantity', '1')} × "
+                    f"{item['item_name']} ({kind}).",
+                    txn_src,
+                )
+            )
+        protection = PROTECTION.get(t.get("seller_protection_type", ""))
+        if t.get("seller_protection_eligible") and protection:
+            facts.append((f"PayPal marks this payment as eligible for {protection}.", txn_src))
+
+    facts.append(
+        (
+            f"The buyer opened the case on {day(d['create_time'])}, "
+            f"reason: {REASONS.get(d['reason'], d['reason'])}.",
+            src,
+        )
+    )
+
+    return [Evidence(f"E{i}", text, source) for i, (text, source) in enumerate(facts, start=1)]
+
+
+def build_case(d: dict) -> DisputeCase:
+    claims = [
+        m["content"].strip()
+        for m in d.get("messages", [])
+        if m.get("posted_by") == "BUYER" and m.get("content")
+    ]
+    requested = [
+        e["evidence_type"]
+        for e in d.get("evidences", [])
+        if e.get("source") == "REQUESTED_FROM_SELLER"
+    ]
+    due = d.get("seller_response_due_date")
+    return DisputeCase(
+        dispute_id=d["dispute_id"],
+        reason=REASONS.get(d["reason"], d["reason"]),
+        amount=money(d["dispute_amount"]),
+        status=d["status"],
+        respond_by=day(due) if due else None,
+        buyer_claims=claims,
+        requested_from_seller=requested,
+        evidence=evidence_from_dispute(d),
+    )
