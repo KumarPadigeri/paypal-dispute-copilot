@@ -3,3 +3,5 @@ python-dotenv==1.1.1
 pytest==8.4.2
 ruff==0.13.3
 azure-identity==1.25.1
+agent-framework-core==1.23.0
+agent-framework-openai==1.17.0
