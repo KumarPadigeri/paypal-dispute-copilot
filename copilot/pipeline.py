@@ -59,15 +59,36 @@ def feedback(draft: Draft, rejected: dict[int, str]) -> str:
     )
 
 
-async def draft_reply(case: DisputeCase, write: WriteFn, verify: VerifyFn) -> Result:
+def _verdicts(draft: Draft, rejected: dict[int, str]) -> list[dict]:
+    return [
+        {"sentence": s.text, "supported": i not in rejected, "reason": rejected.get(i)}
+        for i, s in enumerate(draft.sentences)
+    ]
+
+
+async def draft_reply(
+    case: DisputeCase,
+    write: WriteFn,
+    verify: VerifyFn,
+    on_event: Callable[[str, dict], None] = lambda name, data: None,
+) -> Result:
+    """`on_event(name, data)` reports progress: writing, draft, verifying, verdicts, rewriting."""
+    on_event("writing", {"round": 1})
     draft = await write(case, None)
+    on_event("draft", {"round": 1, "sentences": draft.model_dump()["sentences"]})
+    on_event("verifying", {"round": 1})
     rejected = await review(case, draft, verify)
+    on_event("verdicts", {"round": 1, "verdicts": _verdicts(draft, rejected)})
     if not rejected:
         return Result(draft=draft)
 
     first = [Rejection(draft.sentences[i].text, why) for i, why in rejected.items()]
+    on_event("rewriting", {"round": 2, "rejected": len(first)})
     draft = await write(case, feedback(draft, rejected))
+    on_event("draft", {"round": 2, "sentences": draft.model_dump()["sentences"]})
+    on_event("verifying", {"round": 2})
     rejected = await review(case, draft, verify)
+    on_event("verdicts", {"round": 2, "verdicts": _verdicts(draft, rejected)})
 
     kept: list[Sentence] = [s for i, s in enumerate(draft.sentences) if i not in rejected]
     removed = [Rejection(draft.sentences[i].text, why) for i, why in rejected.items()]
