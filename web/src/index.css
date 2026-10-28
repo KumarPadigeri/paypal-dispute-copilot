@@ -792,7 +792,6 @@ body.resizing {
   display: inline-flex;
   border: 1px solid var(--border);
   border-radius: 8px;
-  overflow: hidden;
   margin-bottom: 10px;
 }
 
@@ -811,6 +810,14 @@ body.resizing {
 
 .segmented button + button {
   border-left: 1px solid var(--border);
+}
+
+.segmented button:first-child {
+  border-radius: 7px 0 0 7px;
+}
+
+.segmented button:last-child {
+  border-radius: 0 7px 7px 0;
 }
 
 .segmented button[aria-pressed='true'] {
@@ -1038,4 +1045,48 @@ th[aria-sort] .th-sort {
 
 .table th.num .th-sort {
   flex-direction: row-reverse;
+}
+
+.empty-state p {
+  margin: 0 0 8px;
+  color: var(--text);
+}
+
+
+/* Tooltips for icon-only buttons: on hover and on keyboard focus (native titles never show on focus) */
+[data-tip] {
+  position: relative;
+}
+
+[data-tip]::after {
+  content: attr(data-tip);
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 20;
+  padding: 4px 8px;
+  border-radius: 6px;
+  background: var(--text);
+  color: var(--bg);
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: normal;
+  text-transform: none;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.12s 0.2s;
+}
+
+/* Buttons at the right edge open their tooltip leftwards so it stays on screen */
+[data-tip][data-tip-align='end']::after {
+  left: auto;
+  right: 0;
+  transform: none;
+}
+
+[data-tip]:hover::after,
+[data-tip]:focus-visible::after {
+  opacity: 1;
 }

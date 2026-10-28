@@ -173,6 +173,14 @@ function DisputeTable({ items, openId, onOpen }: ListProps) {
 
 type ListProps = { items: DisputeSummary[]; openId: string | null; onOpen: (id: string) => void }
 
+// What an empty filter means, in plain words.
+const EMPTY: Record<string, string> = {
+  reply: "You're all caught up. Nothing needs your reply.",
+  waiting: 'Nothing is waiting on the buyer or PayPal.',
+  closed: 'No closed disputes yet.',
+}
+const EMPTY_ALL = 'No disputes. Nice.'
+
 const needsReply = (d: DisputeSummary) => Number(d.status === 'WAITING_FOR_SELLER_RESPONSE')
 
 type DisputeListProps = { openId: string | null; roomy: boolean; onOpen: (id: string) => void }
@@ -224,7 +232,7 @@ function DisputeList({ openId, roomy, onOpen }: DisputeListProps) {
             <button
               aria-pressed={view === 'list'}
               aria-label="List view"
-              title="List view"
+              data-tip="List view"
               onClick={() => setView('list')}
             >
               <ListIcon />
@@ -232,7 +240,7 @@ function DisputeList({ openId, roomy, onOpen }: DisputeListProps) {
             <button
               aria-pressed={view === 'grid'}
               aria-label="Grid view"
-              title="Grid view"
+              data-tip="Grid view"
               onClick={() => setView('grid')}
             >
               <GridIcon />
@@ -256,7 +264,20 @@ function DisputeList({ openId, roomy, onOpen }: DisputeListProps) {
       )}
 
       {shown.length === 0 ? (
-        <div className="notice">{disputes.length ? 'No disputes match this filter.' : 'No disputes. Nice.'}</div>
+        <div className="notice empty-state">
+          <p>{disputes.length === 0 ? EMPTY_ALL : category ? 'No results.' : EMPTY[filter]}</p>
+          {disputes.length > 0 && (
+            <button
+              className="link"
+              onClick={() => {
+                setFilter('all')
+                setCategory(null)
+              }}
+            >
+              Show all disputes
+            </button>
+          )}
+        </div>
       ) : (
         asTable ? (
           <DisputeTable items={shown} openId={openId} onOpen={onOpen} />

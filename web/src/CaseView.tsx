@@ -28,7 +28,7 @@ export default function CaseView({ id, onClose }: { id: string; onClose: () => v
         <span className="mono case-id">{id}</span>
         <CopyButton text={id} />
       </span>
-      <button className="icon-btn" onClick={onClose} aria-label="Close dispute details" title="Close (Esc)">
+      <button className="icon-btn" onClick={onClose} aria-label="Close dispute details" data-tip="Close (Esc)" data-tip-align="end">
         <CloseIcon />
       </button>
     </div>
@@ -124,7 +124,7 @@ function CopyButton({ text }: { text: string }) {
   }
   return (
     <>
-      <button className="icon-btn small" onClick={copy} aria-label="Copy case ID" title="Copy case ID">
+      <button className="icon-btn small" onClick={copy} aria-label="Copy case ID" data-tip="Copy case ID">
         <CopyIcon />
       </button>
       <span className="copied" aria-live="polite">
