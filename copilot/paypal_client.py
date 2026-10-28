@@ -1,10 +1,10 @@
 """Small PayPal REST client for the sandbox."""
 
 import json
-import os
 
 import httpx
-from dotenv import load_dotenv
+
+from copilot.settings import setting
 
 SANDBOX_URL = "https://api-m.sandbox.paypal.com"
 
@@ -20,12 +20,11 @@ class PayPalClient:
 
     @classmethod
     def from_env(cls) -> "PayPalClient":
-        load_dotenv()
-        client_id = os.getenv("PAYPAL_CLIENT_ID")
-        secret = os.getenv("PAYPAL_CLIENT_SECRET")
+        client_id = setting("PAYPAL_CLIENT_ID")
+        secret = setting("PAYPAL_CLIENT_SECRET")
         if not client_id or not secret:
             raise RuntimeError("Missing PAYPAL_CLIENT_ID or PAYPAL_CLIENT_SECRET in .env")
-        return cls(client_id, secret, os.getenv("PAYPAL_BASE_URL", SANDBOX_URL))
+        return cls(client_id, secret, setting("PAYPAL_BASE_URL", SANDBOX_URL))
 
     def _headers(self) -> dict[str, str]:
         if self._token is None:

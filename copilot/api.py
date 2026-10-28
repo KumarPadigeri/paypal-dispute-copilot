@@ -6,7 +6,6 @@ Run: .venv/bin/uvicorn copilot.api:app --reload
 
 import asyncio
 import json
-import os
 from collections.abc import Callable
 from dataclasses import asdict
 from pathlib import Path
@@ -21,6 +20,7 @@ from copilot.demo import REPLAYS, DemoGate, load_replay, play
 from copilot.evidence import REASONS, gather_case
 from copilot.paypal_client import PayPalClient
 from copilot.pipeline import VerifyFn, WriteFn, draft_reply, final_payload
+from copilot.settings import setting
 from copilot.submit import NotSendable, build_evidences
 from copilot.writer import split_claims
 
@@ -55,7 +55,7 @@ WEB_DIST = Path(__file__).parent.parent / "web" / "dist"
 
 
 def gate_from_env() -> DemoGate:
-    return DemoGate(os.getenv("DEMO_PIN"), int(os.getenv("DRAFT_DAILY_LIMIT", "30")))
+    return DemoGate(setting("DEMO_PIN"), int(setting("DRAFT_DAILY_LIMIT", "30")))
 
 
 def create_app(
