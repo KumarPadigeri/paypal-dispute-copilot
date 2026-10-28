@@ -130,6 +130,16 @@ export default function App() {
     return () => window.removeEventListener('hashchange', onHash)
   }, [])
 
+  // Esc closes the open case, like closing a side panel.
+  useEffect(() => {
+    if (!openId) return
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') location.hash = ''
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [openId])
+
   return (
     <div className="app">
       <header className="topbar">
@@ -137,7 +147,8 @@ export default function App() {
         <h1>Dispute Copilot</h1>
         <span className="tag">PayPal sandbox</span>
       </header>
-      {/* Desktop: list and case side by side. Phone: one at a time (see index.css). */}
+      {/* No case open: list uses the full width. Case open: list left, case panel right
+          with a close button (on phones the panel covers the screen). See index.css. */}
       <div className={`layout ${openId ? 'has-case' : ''}`}>
         <aside className="list-pane">
           <h2 className="section-title">Disputes</h2>
@@ -146,13 +157,11 @@ export default function App() {
             onOpen={(id) => (location.hash = `/case/${encodeURIComponent(id)}`)}
           />
         </aside>
-        <main className="case-pane">
-          {openId ? (
-            <CaseView key={openId} id={openId} onBack={() => (location.hash = '')} />
-          ) : (
-            <div className="notice empty">Select a dispute to see the buyer's claims and PayPal's evidence.</div>
-          )}
-        </main>
+        {openId && (
+          <main className="case-pane">
+            <CaseView key={openId} id={openId} onClose={() => (location.hash = '')} />
+          </main>
+        )}
       </div>
     </div>
   )

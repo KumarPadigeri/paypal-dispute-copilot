@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useState } from 'react'
 import DraftPanel from './DraftPanel'
+import { CloseIcon } from './icons'
 import { type CaseDetail, REQUESTED, type Sentence, formatAmount, getCase, statusOf } from './api'
 
-export default function CaseView({ id, onBack }: { id: string; onBack: () => void }) {
+export default function CaseView({ id, onClose }: { id: string; onClose: () => void }) {
   const [c, setCase] = useState<CaseDetail | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [focus, setFocus] = useState<Sentence | null>(null)
@@ -13,13 +14,16 @@ export default function CaseView({ id, onBack }: { id: string; onBack: () => voi
 
   useEffect(load, [load])
 
-  const back = (
-    <button className="back" onClick={onBack}>
-      ← All disputes
-    </button>
+  const bar = (
+    <div className="pane-bar">
+      <span className="section-title">Dispute details</span>
+      <button className="icon-btn" onClick={onClose} aria-label="Close dispute details" title="Close (Esc)">
+        <CloseIcon />
+      </button>
+    </div>
   )
-  if (error) return <>{back}<div className="notice error">Could not load this case ({error}).</div></>
-  if (!c) return <>{back}<div className="notice">Gathering evidence from PayPal…</div></>
+  if (error) return <>{bar}<div className="notice error">Could not load this case ({error}).</div></>
+  if (!c) return <>{bar}<div className="notice">Gathering evidence from PayPal…</div></>
 
   const status = statusOf(c.status)
   const requested = c.requested_from_seller.map((r) => REQUESTED[r] ?? r)
@@ -32,7 +36,7 @@ export default function CaseView({ id, onBack }: { id: string; onBack: () => voi
 
   return (
     <>
-      {back}
+      {bar}
       <section className="case-head">
         <div>
           <h2>{c.reason}</h2>

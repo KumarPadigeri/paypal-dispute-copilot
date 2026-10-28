@@ -33,3 +33,9 @@ export const CheckIcon = () => (
     <path d="M5.6 8.2l1.7 1.7 3.2-3.4" />
   </svg>
 )
+
+export const CloseIcon = () => (
+  <svg {...base} width={16} height={16}>
+    <path d="M4 4l8 8M12 4l-8 8" />
+  </svg>
+)
