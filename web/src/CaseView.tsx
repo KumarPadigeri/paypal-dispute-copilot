@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import DraftPanel from './DraftPanel'
-import { CloseIcon } from './icons'
+import { CloseIcon, CopyIcon } from './icons'
 import { type CaseDetail, REQUESTED, type Sentence, formatAmount, getCase, statusOf } from './api'
 
 export default function CaseView({ id, onClose }: { id: string; onClose: () => void }) {
@@ -23,7 +23,11 @@ export default function CaseView({ id, onClose }: { id: string; onClose: () => v
 
   const bar = (
     <div className="pane-bar">
-      <span className="section-title">Dispute details</span>
+      <span className="pane-title">
+        <span className="section-title">Dispute details</span>
+        <span className="mono case-id">{id}</span>
+        <CopyButton text={id} />
+      </span>
       <button className="icon-btn" onClick={onClose} aria-label="Close dispute details" title="Close (Esc)">
         <CloseIcon />
       </button>
@@ -49,12 +53,7 @@ export default function CaseView({ id, onClose }: { id: string; onClose: () => v
           <h2 ref={heading} tabIndex={-1}>
             {c.reason}
           </h2>
-          <p className="meta">
-            <span className="mono">{c.dispute_id}</span>
-            {c.respond_by && (
-              <span className="nowrap"> · Reply by {c.respond_by.replace(' (UTC)', '')}</span>
-            )}
-          </p>
+          {c.respond_by && <p className="meta">Reply by {c.respond_by.replace(' (UTC)', '')}</p>}
         </div>
         <div className="case-head-right">
           <span className="case-amount">{formatAmount(c.amount)}</span>
@@ -108,6 +107,29 @@ export default function CaseView({ id, onClose }: { id: string; onClose: () => v
           </ol>
         </section>
       </div>
+    </>
+  )
+}
+
+function CopyButton({ text }: { text: string }) {
+  const [copied, setCopied] = useState(false)
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(text)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 1500)
+    } catch {
+      /* clipboard blocked: the id is still selectable text */
+    }
+  }
+  return (
+    <>
+      <button className="icon-btn small" onClick={copy} aria-label="Copy case ID" title="Copy case ID">
+        <CopyIcon />
+      </button>
+      <span className="copied" aria-live="polite">
+        {copied ? 'Copied' : ''}
+      </span>
     </>
   )
 }

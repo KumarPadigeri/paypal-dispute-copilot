@@ -1,6 +1,7 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import type { JSX } from 'react'
 import CaseView from './CaseView'
+import Splitter, { LIST_DEFAULT } from './Splitter'
 import ThemeToggle from './ThemeToggle'
 import { CheckIcon, ClockIcon, GridIcon, ListIcon, ReplyIcon } from './icons'
 import { type DisputeSummary, formatAgo, formatDate, formatMoney, listDisputes, statusOf } from './api'
@@ -112,10 +113,15 @@ function DisputeTable({ items, openId, onOpen }: ListProps) {
           {items.map((d) => {
             const status = statusOf(d.status)
             return (
-              // The whole row is clickable; the case id is a real button for keyboard users.
-              <tr key={d.id} className={openId === d.id ? 'selected' : ''} onClick={() => onOpen(d.id)}>
+              // Only the case id opens a case (a real button: works with mouse and keyboard).
+              <tr key={d.id} className={openId === d.id ? 'selected' : ''}>
                 <td>
-                  <button className="link mono" data-open={d.id} aria-current={openId === d.id}>
+                  <button
+                    className="link mono"
+                    data-open={d.id}
+                    aria-current={openId === d.id}
+                    onClick={() => onOpen(d.id)}
+                  >
                     {d.id}
                   </button>
                 </td>
@@ -140,15 +146,17 @@ type ListProps = { items: DisputeSummary[]; openId: string | null; onOpen: (id: 
 
 const needsReply = (d: DisputeSummary) => Number(d.status === 'WAITING_FOR_SELLER_RESPONSE')
 
-function DisputeList({ openId, onOpen }: { openId: string | null; onOpen: (id: string) => void }) {
+type DisputeListProps = { openId: string | null; roomy: boolean; onOpen: (id: string) => void }
+
+function DisputeList({ openId, roomy, onOpen }: DisputeListProps) {
   const [disputes, setDisputes] = useState<DisputeSummary[] | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [filter, setFilter] = useState('all')
   const [category, setCategory] = useState<string | null>(null)
   const [view, setView] = useView()
   const narrow = useNarrow()
-  // A table needs room: phones and the narrow column beside an open case always get cards.
-  const asTable = view === 'list' && !narrow && !openId
+  // A table needs room: phones, and a narrow list beside an open case, get cards.
+  const asTable = view === 'list' && !narrow && (!openId || roomy)
 
   useEffect(() => {
     listDisputes().then(
@@ -182,7 +190,7 @@ function DisputeList({ openId, onOpen }: { openId: string | null; onOpen: (id: s
             </button>
           ))}
         </div>
-        {!narrow && !openId && (
+        {!narrow && (!openId || roomy) && (
           <div className="segmented" role="group" aria-label="Layout">
             <button aria-pressed={view === 'list'} onClick={() => setView('list')} title="List view">
               <ListIcon />
@@ -229,8 +237,31 @@ const caseIdFromHash = () => {
   return m ? decodeURIComponent(m[1]) : null
 }
 
+function useListWidth(): [number, (w: number) => void] {
+  const [w, setW] = useState(() => {
+    try {
+      return Number(localStorage.getItem('listWidth')) || LIST_DEFAULT
+    } catch {
+      return LIST_DEFAULT
+    }
+  })
+  const save = (next: number) => {
+    setW(next)
+    try {
+      localStorage.setItem('listWidth', String(next))
+    } catch {
+      /* private mode: keep it for this visit only */
+    }
+  }
+  return [w, save]
+}
+
+const TABLE_MIN = 860 // list width at which the whole table fits beside an open case
+
 export default function App() {
   const [openId, setOpenId] = useState<string | null>(caseIdFromHash)
+  const [listWidth, setListWidth] = useListWidth()
+  const layout = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     const onHash = () => setOpenId(caseIdFromHash())
@@ -268,16 +299,22 @@ export default function App() {
       </header>
       {/* No case open: list uses the full width. Case open: list left, case panel right
           with a close button (on phones the panel covers the screen). See index.css. */}
-      <div className={`layout ${openId ? 'has-case' : ''}`}>
+      <div
+        ref={layout}
+        className={`layout ${openId ? 'has-case' : ''}`}
+        style={{ '--list-w': `${listWidth}px` } as React.CSSProperties}
+      >
         <aside className="list-pane">
           <h2 className="section-title" id="disputes" tabIndex={-1}>
             Disputes
           </h2>
           <DisputeList
             openId={openId}
+            roomy={listWidth >= TABLE_MIN}
             onOpen={(id) => (location.hash = `/case/${encodeURIComponent(id)}`)}
           />
         </aside>
+        {openId && <Splitter width={listWidth} onChange={setListWidth} container={layout} />}
         {openId && (
           <main className="case-pane">
             <CaseView key={openId} id={openId} onClose={close} />

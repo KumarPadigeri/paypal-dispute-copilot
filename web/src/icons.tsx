@@ -67,3 +67,10 @@ export const MoonIcon = () => (
     <path d="M13.5 9.5A5.5 5.5 0 116.5 2.5a4.5 4.5 0 007 7z" />
   </svg>
 )
+
+export const CopyIcon = () => (
+  <svg {...base}>
+    <rect x="5.5" y="5.5" width="8" height="8" rx="1.5" />
+    <path d="M10.5 5.5V4A1.5 1.5 0 009 2.5H4A1.5 1.5 0 002.5 4v5A1.5 1.5 0 004 10.5h1.5" />
+  </svg>
+)

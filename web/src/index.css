@@ -250,7 +250,11 @@ button {
   top: 16px;
 }
 
-@media (max-width: 860px) {
+.case-pane {
+  container-type: inline-size;
+}
+
+@container (max-width: 820px) {
   .columns {
     grid-template-columns: minmax(0, 1fr);
   }
@@ -277,6 +281,7 @@ button {
 }
 
 .item {
+  overflow-wrap: anywhere;
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
   gap: 12px;
@@ -344,7 +349,47 @@ button {
 }
 
 .layout.has-case {
-  grid-template-columns: 376px minmax(0, 1fr);
+  grid-template-columns: var(--list-w, 392px) 16px minmax(0, 1fr);
+  column-gap: 4px;
+}
+
+/* The draggable divider: a thin line that turns accent-colored on hover, drag or focus */
+.splitter {
+  align-self: stretch;
+  min-height: 60vh;
+  height: 100%;
+  cursor: col-resize;
+  position: relative;
+  touch-action: none;
+}
+
+.splitter::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  width: 2px;
+  transform: translateX(-50%);
+  border-radius: 2px;
+  background: var(--border);
+  transition: background 0.15s;
+}
+
+.splitter:hover::before,
+.splitter:focus-visible::before,
+body.resizing .splitter::before {
+  background: var(--accent);
+}
+
+.splitter:focus-visible {
+  outline: none;
+}
+
+/* While dragging: no text selection, resize cursor everywhere */
+body.resizing {
+  cursor: col-resize;
+  user-select: none;
 }
 
 .layout:not(.has-case) .list {
@@ -366,6 +411,30 @@ button {
 
 .pane-bar .section-title {
   margin: 0;
+}
+
+.pane-title {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  min-width: 0;
+}
+
+.case-id {
+  color: var(--text);
+  user-select: all;
+}
+
+.icon-btn.small {
+  width: 26px;
+  height: 26px;
+  border-color: transparent;
+}
+
+.copied {
+  font-size: 12px;
+  color: var(--ok);
 }
 
 .icon-btn {
@@ -399,7 +468,8 @@ button {
     position: static;
   }
 
-  .layout.has-case .list-pane {
+  .layout.has-case .list-pane,
+  .splitter {
     display: none;
   }
 }
@@ -791,11 +861,13 @@ button {
 }
 
 .table tbody tr {
-  cursor: pointer;
   transition: background 0.15s;
 }
 
-.table tbody tr:hover,
+.table tbody tr:hover {
+  background: color-mix(in srgb, var(--surface-2) 50%, transparent);
+}
+
 .table tbody tr.selected {
   background: var(--surface-2);
 }
@@ -867,9 +939,66 @@ h2[tabindex='-1']:focus {
   gap: 6px;
 }
 
-/* On wide screens the evidence panel sits right beside the reply, so the inline copy is not needed. */
-@media (min-width: 861px) {
+/* With two columns the evidence panel sits right beside the reply, so the inline copy is not needed. */
+@container (min-width: 821px) {
   .cited-inline {
     display: none;
   }
+}
+
+
+/* Desktop app shell: the top bar stays put and each panel scrolls on its own. */
+@media (min-width: 1001px) {
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+
+  body {
+    overflow: hidden;
+  }
+
+  .app {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    padding-bottom: 0;
+  }
+
+  .topbar {
+    flex: none;
+  }
+
+  .layout {
+    flex: 1;
+    min-height: 0;
+    grid-template-rows: minmax(0, 1fr);
+    align-items: stretch;
+  }
+
+  .list-pane,
+  .case-pane {
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-gutter: stable;
+    /* room so focus rings and card borders are not clipped at the edges */
+    padding: 2px 6px 32px 2px;
+  }
+
+  .list-pane {
+    position: static;
+  }
+
+  .splitter {
+    min-height: 0;
+  }
+}
+
+/* Quiet scrollbars that match the theme */
+.list-pane,
+.case-pane {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-strong) transparent;
 }
