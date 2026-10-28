@@ -94,7 +94,36 @@ function DisputeCards({ items, openId, onOpen }: ListProps) {
   )
 }
 
+type SortKey = 'amount' | 'created' | 'updated'
+const SORT_VALUE: Record<SortKey, (d: DisputeSummary) => number> = {
+  amount: (d) => Number(d.amount?.value ?? 0),
+  created: (d) => (d.created ? Date.parse(d.created) : 0),
+  updated: (d) => (d.updated ? Date.parse(d.updated) : 0),
+}
+
 function DisputeTable({ items, openId, onOpen }: ListProps) {
+  // No sort picked: keep the default order (cases needing a reply first).
+  const [sort, setSort] = useState<{ key: SortKey; desc: boolean } | null>(null)
+  const rows = sort
+    ? [...items].sort((a, b) => (SORT_VALUE[sort.key](a) - SORT_VALUE[sort.key](b)) * (sort.desc ? -1 : 1))
+    : items
+  // First click: newest / largest first; next click flips it.
+  const toggle = (key: SortKey) => setSort(sort?.key === key ? { key, desc: !sort.desc } : { key, desc: true })
+  const header = (key: SortKey, label: string, num = false) => (
+    <th
+      scope="col"
+      className={num ? 'num' : undefined}
+      aria-sort={sort?.key === key ? (sort.desc ? 'descending' : 'ascending') : undefined}
+    >
+      <button className="th-sort" onClick={() => toggle(key)}>
+        {label}
+        <span className="arrow" aria-hidden="true">
+          {sort?.key === key ? (sort.desc ? '▼' : '▲') : ''}
+        </span>
+      </button>
+    </th>
+  )
+
   return (
     <div className="table-wrap">
       <table className="table">
@@ -102,15 +131,15 @@ function DisputeTable({ items, openId, onOpen }: ListProps) {
           <tr>
             <th scope="col">Case</th>
             <th scope="col">Reason</th>
-            <th scope="col" className="num">Amount</th>
+            {header('amount', 'Amount', true)}
             <th scope="col">Status</th>
             <th scope="col">Stage</th>
-            <th scope="col">Opened</th>
-            <th scope="col">Last update</th>
+            {header('created', 'Opened')}
+            {header('updated', 'Last update')}
           </tr>
         </thead>
         <tbody>
-          {items.map((d) => {
+          {rows.map((d) => {
             const status = statusOf(d.status)
             return (
               // Only the case id opens a case (a real button: works with mouse and keyboard).
@@ -192,13 +221,21 @@ function DisputeList({ openId, roomy, onOpen }: DisputeListProps) {
         </div>
         {!narrow && (!openId || roomy) && (
           <div className="segmented" role="group" aria-label="Layout">
-            <button aria-pressed={view === 'list'} onClick={() => setView('list')} title="List view">
+            <button
+              aria-pressed={view === 'list'}
+              aria-label="List view"
+              title="List view"
+              onClick={() => setView('list')}
+            >
               <ListIcon />
-              <span>List</span>
             </button>
-            <button aria-pressed={view === 'grid'} onClick={() => setView('grid')} title="Grid view">
+            <button
+              aria-pressed={view === 'grid'}
+              aria-label="Grid view"
+              title="Grid view"
+              onClick={() => setView('grid')}
+            >
               <GridIcon />
-              <span>Grid</span>
             </button>
           </div>
         )}
