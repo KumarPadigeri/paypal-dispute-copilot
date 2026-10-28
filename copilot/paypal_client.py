@@ -74,9 +74,18 @@ class PayPalClient:
             raise RuntimeError(f"PayPal refused the refund ({resp.status_code}): {resp.text}")
         return resp.json()
 
-    def make_offer(self, dispute_id: str, note: str, offer_type: str, amount: dict) -> dict:
+    def make_offer(
+        self,
+        dispute_id: str,
+        note: str,
+        offer_type: str,
+        amount: dict,
+        return_address: dict | None = None,
+    ) -> dict:
         """Offer the buyer a resolution; PayPal refunds if they accept."""
         body = {"note": note, "offer_type": offer_type, "offer_amount": amount}
+        if return_address:
+            body["return_shipping_address"] = return_address
         resp = self._http.post(
             f"/v1/customer/disputes/{dispute_id}/make-offer", headers=self._headers(), json=body
         )

@@ -21,7 +21,7 @@ from copilot.demo import REPLAYS, DemoGate, load_replay, play
 from copilot.evidence import REASONS, gather_case
 from copilot.paypal_client import PayPalClient
 from copilot.pipeline import VerifyFn, WriteFn, draft_reply, final_payload
-from copilot.settings import setting
+from copilot.settings import return_address, setting
 from copilot.submit import NotSendable, build_evidences
 from copilot.writer import split_claims
 
@@ -229,11 +229,16 @@ def create_app(
         if res is None:
             raise HTTPException(409, "That resolution is not available on this case right now")
         client = pp(request)
-        if res.key == "refund":
-            client.accept_claim(dispute_id, res.note)
-        else:
-            amount = client.get_dispute(dispute_id)["dispute_amount"]
-            client.make_offer(dispute_id, res.note, "REFUND_WITH_RETURN", amount)
+        try:
+            if res.key == "refund":
+                client.accept_claim(dispute_id, res.note)
+            else:
+                amount = client.get_dispute(dispute_id)["dispute_amount"]
+                client.make_offer(
+                    dispute_id, res.note, "REFUND_WITH_RETURN", amount, return_address()
+                )
+        except RuntimeError as e:  # PayPal said no: show its reason instead of a bare 500
+            raise HTTPException(502, str(e)) from e
         return {"done": res.key, "status": client.get_dispute(dispute_id)["status"]}
 
     # The built web page (npm run build) is served from the same server, after the /api routes.

@@ -54,8 +54,8 @@ class NoTrackingPayPal:
         self.calls.append(("accept_claim", dispute_id, note))
         return {}
 
-    def make_offer(self, dispute_id, note, offer_type, amount):
-        self.calls.append(("make_offer", dispute_id, offer_type, amount["value"]))
+    def make_offer(self, dispute_id, note, offer_type, amount, return_address=None):
+        self.calls.append(("make_offer", dispute_id, offer_type, amount["value"], return_address))
         return {}
 
     def list_disputes(self):
@@ -114,3 +114,37 @@ def test_case_lists_only_resolutions_paypal_allows_now():
     # the fixture's dispute allows accept_claim and make_offer
     assert [r["key"] for r in advice["resolutions"]] == ["refund"]
     assert advice["resolutions"][0]["label"] == "Refund the buyer now"
+
+
+def test_return_offer_includes_the_return_address(monkeypatch):
+    nad = json.loads(json.dumps(DISPUTE))
+    nad["reason"] = "MERCHANDISE_OR_SERVICE_NOT_AS_DESCRIBED"
+
+    class NadPayPal(NoTrackingPayPal):
+        def get_dispute(self, dispute_id):
+            return nad
+
+    monkeypatch.setenv("RETURN_ADDRESS", "1 Test Way | Austin | TX | 73301 | US")
+    pp = NadPayPal()
+    c = TestClient(create_app(pp, gate=DemoGate(None, 30)))
+    ok = c.post("/api/disputes/PP-R-FOD-10194708/resolve", json={"action": "refund_after_return"})
+    assert ok.status_code == 200
+    [(name, _, offer_type, value, address)] = pp.calls
+    assert (name, offer_type, value) == ("make_offer", "REFUND_WITH_RETURN", "49.99")
+    assert address == {
+        "address_line_1": "1 Test Way",
+        "admin_area_2": "Austin",
+        "admin_area_1": "TX",
+        "postal_code": "73301",
+        "country_code": "US",
+    }
+
+
+def test_paypal_refusal_is_shown_not_a_bare_500():
+    class RefusingPayPal(NoTrackingPayPal):
+        def accept_claim(self, dispute_id, note):
+            raise RuntimeError("PayPal refused the refund (400): not allowed now")
+
+    c = TestClient(create_app(RefusingPayPal(), gate=DemoGate(None, 30)))
+    r = c.post("/api/disputes/PP-R-FOD-10194708/resolve", json={"action": "refund"})
+    assert r.status_code == 502 and "not allowed now" in r.json()["detail"]
