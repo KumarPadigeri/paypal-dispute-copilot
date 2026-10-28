@@ -5,6 +5,7 @@ import httpx
 from fastapi.testclient import TestClient
 
 from copilot.api import create_app
+from copilot.demo import DemoGate
 from copilot.verifier import Verdict
 from copilot.writer import Draft, Sentence
 
@@ -57,7 +58,7 @@ def fake_agents():
 
 
 paypal = FakePayPal()
-client = TestClient(create_app(paypal, agents=fake_agents))
+client = TestClient(create_app(paypal, agents=fake_agents, gate=DemoGate(None, 30)))
 
 
 def events(text: str) -> list[tuple[str, dict]]:
@@ -103,6 +104,7 @@ def test_draft_streams_each_step_then_the_verified_reply():
     assert resp.headers["content-type"].startswith("text/event-stream")
     evs = events(resp.text)
     assert [n for n, _ in evs] == [
+        "mode",
         "writing",
         "draft",
         "verifying",
@@ -113,7 +115,7 @@ def test_draft_streams_each_step_then_the_verified_reply():
         "verdicts",
         "final",
     ]
-    round1 = evs[3][1]["verdicts"]
+    round1 = evs[4][1]["verdicts"]
     assert round1[1] == {
         "sentence": TOO_FAR.text,
         "supported": False,
@@ -126,7 +128,7 @@ def test_draft_streams_each_step_then_the_verified_reply():
 
 
 def test_send_needs_a_verified_draft_first():
-    fresh = TestClient(create_app(FakePayPal(), agents=fake_agents))
+    fresh = TestClient(create_app(FakePayPal(), agents=fake_agents, gate=DemoGate(None, 30)))
     resp = fresh.post("/api/disputes/PP-R-FOD-10194708/send")
     assert resp.status_code == 409
 
@@ -142,3 +144,95 @@ def test_send_sends_exactly_the_verified_reply_once():
     assert ev["evidence_info"]["tracking_info"][0]["tracking_number"] == "9400111899561234567890"
     # A second click without a new verified draft sends nothing.
     assert client.post("/api/disputes/PP-R-FOD-10194708/send").status_code == 409
+
+
+# --- Public demo: PIN, daily cap, replay -------------------------------------------------
+
+REPLAY = {
+    "events": [
+        {"t": 0.0, "name": "writing", "data": {"round": 1}},
+        {
+            "t": 0.5,
+            "name": "final",
+            "data": {
+                "sentences": [],
+                "removed": [],
+                "rounds": 1,
+                "answered": [],
+                "reply": "Recorded reply.",
+            },
+        },
+    ]
+}
+
+
+def demo_client(tmp_path, pin="2468", limit=30, with_replay=True):
+    if with_replay:
+        (tmp_path / "PP-R-FOD-10194708.json").write_text(json.dumps(REPLAY))
+    calls = {"agents": 0}
+
+    def counting_agents():
+        calls["agents"] += 1
+        return fake_agents()
+
+    app = create_app(
+        FakePayPal(),
+        agents=counting_agents,
+        gate=DemoGate(pin, limit),
+        replays=tmp_path,
+        replay_speed=1000,
+    )
+    return TestClient(app), calls
+
+
+def test_without_pin_draft_is_a_free_replay_and_cannot_be_sent(tmp_path):
+    c, calls = demo_client(tmp_path)
+    evs = events(c.get("/api/disputes/PP-R-FOD-10194708/draft").text)
+    assert evs[0] == ("mode", {"live": False, "why": "locked", "live_left": 30})
+    assert evs[-1][1]["reply"] == "Recorded reply."
+    assert calls["agents"] == 0  # no AI was called
+    assert c.post("/api/disputes/PP-R-FOD-10194708/send").status_code == 403
+    pinned = c.post("/api/disputes/PP-R-FOD-10194708/send", headers={"X-Demo-Pin": "2468"})
+    assert pinned.status_code == 409  # a replay never becomes a sendable draft
+
+
+def test_with_pin_draft_is_live_and_counts_toward_the_daily_cap(tmp_path):
+    c, calls = demo_client(tmp_path, limit=1)
+    first = events(c.get("/api/disputes/PP-R-FOD-10194708/draft?pin=2468").text)
+    assert first[0][1]["live"] is True
+    assert calls["agents"] == 1
+    second = events(c.get("/api/disputes/PP-R-FOD-10194708/draft?pin=2468").text)
+    assert second[0][1] == {"live": False, "why": "limit", "live_left": 0}
+    assert calls["agents"] == 1  # cap reached: replay, no extra AI call
+
+
+def test_locked_case_without_a_recording_explains_instead_of_calling_ai(tmp_path):
+    c, calls = demo_client(tmp_path, with_replay=False)
+    evs = events(c.get("/api/disputes/PP-R-FOD-10194708/draft").text)
+    assert evs[-1][0] == "error" and "demo PIN" in evs[-1][1]["message"]
+    assert calls["agents"] == 0
+
+
+def test_unlock_checks_the_pin(tmp_path):
+    c, _ = demo_client(tmp_path)
+    assert c.get("/api/demo").json() == {"pin_required": True, "live_left": 30}
+    assert c.post("/api/demo/unlock", json={"pin": "2468"}).json() == {"ok": True}
+    assert c.post("/api/demo/unlock", json={"pin": "0000"}).json() == {"ok": False}
+
+
+def test_daily_cap_resets_the_next_day():
+    from datetime import date
+
+    day = {"d": date(2026, 11, 1)}
+    g = DemoGate("2468", 2, today=lambda: day["d"])
+    assert [g.take_live(), g.take_live(), g.take_live()] == [True, True, False]
+    day["d"] = date(2026, 11, 2)
+    assert g.live_left() == 2 and g.take_live() is True
+
+
+def test_replay_names_cannot_escape_the_replay_folder(tmp_path):
+    from copilot.demo import load_replay
+
+    (tmp_path / "secret.json").write_text(json.dumps(REPLAY))
+    assert load_replay("../secret", tmp_path / "replays") is None
+    assert load_replay("secret", tmp_path) is None  # lower case is not a case id either

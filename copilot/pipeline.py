@@ -8,7 +8,7 @@ from dataclasses import dataclass, field
 
 from copilot.evidence import DisputeCase
 from copilot.verifier import Verdict
-from copilot.writer import Draft, Sentence, sentence_problems
+from copilot.writer import Draft, Sentence, answered_claims, render, sentence_problems
 
 WriteFn = Callable[[DisputeCase, str | None], Awaitable[Draft]]
 VerifyFn = Callable[[DisputeCase, Draft], Awaitable[list[Verdict]]]
@@ -57,6 +57,17 @@ def feedback(draft: Draft, rejected: dict[int, str]) -> str:
         + "\nWrite the whole response again. Fix those sentences so they say only what "
         "their evidence says, or drop them."
     )
+
+
+def final_payload(result: Result) -> dict:
+    """What the UI receives as the last event of a draft."""
+    return {
+        "sentences": result.draft.model_dump()["sentences"],
+        "removed": [{"sentence": r.sentence, "reason": r.reason} for r in result.removed],
+        "rounds": result.rounds,
+        "answered": sorted(answered_claims(result.draft)),
+        "reply": render(result.draft),
+    }
 
 
 def _verdicts(draft: Draft, rejected: dict[int, str]) -> list[dict]:
