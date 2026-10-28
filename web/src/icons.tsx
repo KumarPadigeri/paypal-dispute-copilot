@@ -54,3 +54,16 @@ export const GridIcon = () => (
     <rect x="9" y="9" width="4.5" height="4.5" rx="1" />
   </svg>
 )
+
+export const SunIcon = () => (
+  <svg {...base} width={16} height={16}>
+    <circle cx="8" cy="8" r="3" />
+    <path d="M8 1.5v1.5M8 13v1.5M1.5 8H3M13 8h1.5M3.4 3.4l1.1 1.1M11.5 11.5l1.1 1.1M3.4 12.6l1.1-1.1M11.5 4.5l1.1-1.1" />
+  </svg>
+)
+
+export const MoonIcon = () => (
+  <svg {...base} width={16} height={16}>
+    <path d="M13.5 9.5A5.5 5.5 0 116.5 2.5a4.5 4.5 0 007 7z" />
+  </svg>
+)

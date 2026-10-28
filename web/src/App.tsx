@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import type { JSX } from 'react'
 import CaseView from './CaseView'
+import ThemeToggle from './ThemeToggle'
 import { CheckIcon, ClockIcon, GridIcon, ListIcon, ReplyIcon } from './icons'
 import { type DisputeSummary, formatAgo, formatDate, formatMoney, listDisputes, statusOf } from './api'
 
@@ -74,6 +75,7 @@ function DisputeCards({ items, openId, onOpen }: ListProps) {
           <button
             key={d.id}
             className={`row ${openId === d.id ? 'selected' : ''}`}
+            data-open={d.id}
             aria-current={openId === d.id}
             onClick={() => onOpen(d.id)}
           >
@@ -113,13 +115,11 @@ function DisputeTable({ items, openId, onOpen }: ListProps) {
               // The whole row is clickable; the case id is a real button for keyboard users.
               <tr key={d.id} className={openId === d.id ? 'selected' : ''} onClick={() => onOpen(d.id)}>
                 <td>
-                  <button className="link mono" aria-current={openId === d.id}>
+                  <button className="link mono" data-open={d.id} aria-current={openId === d.id}>
                     {d.id}
                   </button>
                 </td>
-                <td>
-                  <span className="pill category">{d.reason}</span>
-                </td>
+                <td>{d.reason}</td>
                 <td className="num strong">{formatMoney(d.amount)}</td>
                 <td>
                   <span className={`pill ${status.tone}`}>{status.label}</span>
@@ -238,28 +238,41 @@ export default function App() {
     return () => window.removeEventListener('hashchange', onHash)
   }, [])
 
+  // Closing returns keyboard focus to the dispute that was open (after the list re-renders).
+  const close = useCallback(() => {
+    const id = openId
+    location.hash = ''
+    setTimeout(() => document.querySelector<HTMLElement>(`[data-open="${id}"]`)?.focus(), 50)
+  }, [openId])
+
   // Esc closes the open case, like closing a side panel.
   useEffect(() => {
     if (!openId) return
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') location.hash = ''
+      if (e.key === 'Escape') close()
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [openId])
+  }, [openId, close])
 
   return (
     <div className="app">
+      <a className="skip" href="#disputes">
+        Skip to disputes
+      </a>
       <header className="topbar">
         <img src="/favicon.svg" alt="" />
         <h1>Dispute Copilot</h1>
         <span className="tag">PayPal sandbox</span>
+        <ThemeToggle />
       </header>
       {/* No case open: list uses the full width. Case open: list left, case panel right
           with a close button (on phones the panel covers the screen). See index.css. */}
       <div className={`layout ${openId ? 'has-case' : ''}`}>
         <aside className="list-pane">
-          <h2 className="section-title">Disputes</h2>
+          <h2 className="section-title" id="disputes" tabIndex={-1}>
+            Disputes
+          </h2>
           <DisputeList
             openId={openId}
             onOpen={(id) => (location.hash = `/case/${encodeURIComponent(id)}`)}
@@ -267,7 +280,7 @@ export default function App() {
         </aside>
         {openId && (
           <main className="case-pane">
-            <CaseView key={openId} id={openId} onClose={() => (location.hash = '')} />
+            <CaseView key={openId} id={openId} onClose={close} />
           </main>
         )}
       </div>

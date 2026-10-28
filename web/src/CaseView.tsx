@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import DraftPanel from './DraftPanel'
 import { CloseIcon } from './icons'
 import { type CaseDetail, REQUESTED, type Sentence, formatAmount, getCase, statusOf } from './api'
@@ -13,6 +13,13 @@ export default function CaseView({ id, onClose }: { id: string; onClose: () => v
   }, [id])
 
   useEffect(load, [load])
+
+  // Once the case has loaded, move focus into the panel (keyboard and screen-reader users land here).
+  const heading = useRef<HTMLHeadingElement>(null)
+  const loaded = c !== null
+  useEffect(() => {
+    if (loaded) heading.current?.focus({ preventScroll: true })
+  }, [loaded])
 
   const bar = (
     <div className="pane-bar">
@@ -39,7 +46,9 @@ export default function CaseView({ id, onClose }: { id: string; onClose: () => v
       {bar}
       <section className="case-head">
         <div>
-          <h2>{c.reason}</h2>
+          <h2 ref={heading} tabIndex={-1}>
+            {c.reason}
+          </h2>
           <p className="meta">
             <span className="mono">{c.dispute_id}</span>
             {c.respond_by && (
@@ -76,6 +85,7 @@ export default function CaseView({ id, onClose }: { id: string; onClose: () => v
 
           <DraftPanel
             disputeId={c.dispute_id}
+            evidence={c.evidence}
             canSend={canSend}
             cantSendReason={cantSendReason}
             onFocus={setFocus}

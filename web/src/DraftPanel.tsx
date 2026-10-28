@@ -1,5 +1,13 @@
 import { useEffect, useRef, useState } from 'react'
-import { type DraftEvent, type FinalDraft, type Sentence, sendReply, statusOf, streamDraft } from './api'
+import {
+  type DraftEvent,
+  type Evidence,
+  type FinalDraft,
+  type Sentence,
+  sendReply,
+  statusOf,
+  streamDraft,
+} from './api'
 
 type Step = { key: string; tone: 'run' | 'ok' | 'bad' | 'info'; text: string; detail?: string[] }
 
@@ -34,13 +42,14 @@ function stepFor(e: DraftEvent): Step | null {
 
 type Props = {
   disputeId: string
+  evidence: Evidence[]
   canSend: boolean
   cantSendReason: string | null
   onFocus: (s: Sentence | null) => void
   onSent: () => void
 }
 
-export default function DraftPanel({ disputeId, canSend, cantSendReason, onFocus, onSent }: Props) {
+export default function DraftPanel({ disputeId, evidence, canSend, cantSendReason, onFocus, onSent }: Props) {
   const [steps, setSteps] = useState<Step[]>([])
   const [running, setRunning] = useState(false)
   const [final, setFinal] = useState<FinalDraft | null>(null)
@@ -125,6 +134,8 @@ export default function DraftPanel({ disputeId, canSend, cantSendReason, onFocus
               <button
                 key={i}
                 className={`sentence ${focused === i ? 'on' : ''}`}
+                aria-pressed={focused === i}
+                aria-label={`${s.text} (cites ${s.cites.join(', ')})`}
                 onMouseEnter={() => focus(i)}
                 onFocus={() => focus(i)}
                 onClick={() => focus(focused === i ? null : i)}
@@ -136,7 +147,19 @@ export default function DraftPanel({ disputeId, canSend, cantSendReason, onFocus
               </button>
             ))}
           </div>
-          <p className="hint">Point at or tap a sentence to see the evidence it rests on.</p>
+          {focused !== null && final.sentences[focused] ? (
+            <ul className="cited-inline" aria-label="Evidence for this sentence">
+              {evidence
+                .filter((e) => final.sentences[focused].cites.includes(e.id))
+                .map((e) => (
+                  <li key={e.id}>
+                    <span className="badge">{e.id}</span> {e.text}
+                  </li>
+                ))}
+            </ul>
+          ) : (
+            <p className="hint">Point at or tap a sentence to see the evidence it rests on.</p>
+          )}
 
           {final.removed.length > 0 && (
             <div className="removed">
@@ -161,7 +184,7 @@ export default function DraftPanel({ disputeId, canSend, cantSendReason, onFocus
               </button>
             ) : (
               <>
-                <button className="btn primary" onClick={send}>
+                <button className="btn primary" onClick={send} autoFocus>
                   Yes, send this reply
                 </button>
                 <button className="btn" onClick={() => setConfirming(false)}>
