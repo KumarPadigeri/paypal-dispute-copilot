@@ -1,6 +1,7 @@
 """Web API for the Dispute Copilot UI.
 
 Run: .venv/bin/uvicorn copilot.api:app --reload
+(also serves the built web page from web/dist when it exists)
 """
 
 import asyncio
@@ -12,6 +13,7 @@ from pathlib import Path
 
 from fastapi import FastAPI, Header, HTTPException, Request
 from fastapi.responses import StreamingResponse
+from fastapi.staticfiles import StaticFiles
 from httpx import HTTPStatusError
 from pydantic import BaseModel
 
@@ -49,6 +51,9 @@ class PinCheck(BaseModel):
     pin: str
 
 
+WEB_DIST = Path(__file__).parent.parent / "web" / "dist"
+
+
 def gate_from_env() -> DemoGate:
     return DemoGate(os.getenv("DEMO_PIN"), int(os.getenv("DRAFT_DAILY_LIMIT", "30")))
 
@@ -59,6 +64,7 @@ def create_app(
     gate: DemoGate | None = None,
     replays: Path = REPLAYS,
     replay_speed: float = 1.0,
+    web_dir: Path = WEB_DIST,
 ) -> FastAPI:
     """`paypal`, `agents` and `gate` are injectable so tests use fakes; defaults are real."""
     app = FastAPI(title="Dispute Copilot")
@@ -78,6 +84,10 @@ def create_app(
             if e.response.status_code == 404:
                 raise HTTPException(404, "Dispute not found") from e
             raise
+
+    @app.get("/api/health")
+    def health() -> dict:
+        return {"ok": True}
 
     @app.get("/api/disputes")
     def list_disputes(request: Request) -> list[dict]:
@@ -178,6 +188,10 @@ def create_app(
         pp(request).provide_evidence(dispute_id, evidences)
         request.app.state.verified.pop(dispute_id)
         return {"sent": True, "status": pp(request).get_dispute(dispute_id)["status"]}
+
+    # The built web page (npm run build) is served from the same server, after the /api routes.
+    if web_dir.is_dir():
+        app.mount("/", StaticFiles(directory=web_dir, html=True), name="web")
 
     return app
 

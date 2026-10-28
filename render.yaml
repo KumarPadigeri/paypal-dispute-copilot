@@ -1,0 +1,25 @@
+# Render Blueprint: one web service from the Dockerfile.
+# Secrets are marked sync: false, so they are typed into Render's dashboard, never stored here.
+services:
+  - type: web
+    name: dispute-copilot
+    runtime: docker
+    plan: free
+    healthCheckPath: /api/health
+    envVars:
+      - key: PAYPAL_BASE_URL
+        value: https://api-m.sandbox.paypal.com
+      - key: PAYPAL_CLIENT_ID
+        sync: false
+      - key: PAYPAL_CLIENT_SECRET
+        sync: false
+      - key: FOUNDRY_ENDPOINT
+        value: https://kumarpadigeri-0341-resource.cognitiveservices.azure.com
+      - key: FOUNDRY_DEPLOYMENT
+        value: gpt-5.4-mini
+      - key: FOUNDRY_API_KEY
+        sync: false
+      - key: DEMO_PIN
+        sync: false
+      - key: DRAFT_DAILY_LIMIT
+        value: "30"

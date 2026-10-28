@@ -236,3 +236,11 @@ def test_replay_names_cannot_escape_the_replay_folder(tmp_path):
     (tmp_path / "secret.json").write_text(json.dumps(REPLAY))
     assert load_replay("../secret", tmp_path / "replays") is None
     assert load_replay("secret", tmp_path) is None  # lower case is not a case id either
+
+
+def test_health_and_built_web_page_are_served(tmp_path):
+    (tmp_path / "index.html").write_text("<!doctype html><title>Dispute Copilot</title>")
+    c = TestClient(create_app(FakePayPal(), gate=DemoGate(None, 30), web_dir=tmp_path))
+    assert c.get("/api/health").json() == {"ok": True}
+    assert "Dispute Copilot" in c.get("/").text
+    assert c.get("/api/disputes").status_code == 200  # API routes still win over the page
