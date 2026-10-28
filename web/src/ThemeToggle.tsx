@@ -33,8 +33,7 @@ export default function ThemeToggle() {
   }
 
   return (
-    <button className="icon-btn" onClick={pick} aria-label={`Switch to ${next} theme`} data-tip={`Switch to ${next} theme`}
-      data-tip-align="end">
+    <button className="icon-btn" onClick={pick} aria-label={`Switch to ${next} theme`}>
       {theme === 'dark' ? <SunIcon /> : <MoonIcon />}
     </button>
   )
