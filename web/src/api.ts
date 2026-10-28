@@ -61,8 +61,15 @@ export type CaseDetail = {
   claims: Claim[]
   actions: string[]
   shipments: { carrier: string; tracking_number: string }[]
-  advice: { title: string; text: string; blocks_draft: boolean } | null
+  advice: {
+    title: string
+    text: string
+    blocks_draft: boolean
+    resolutions: Resolution[] // only what PayPal allows right now
+  } | null
 }
+
+export type Resolution = { key: string; label: string; note: string; needs: string }
 
 export const getCase = (id: string) => getJson<CaseDetail>(`/api/disputes/${encodeURIComponent(id)}`)
 
@@ -163,4 +170,16 @@ export async function unlockDemo(pin: string): Promise<boolean> {
     }
   }
   return ok
+}
+
+export async function resolveCase(id: string, action: string): Promise<{ done: string; status: string }> {
+  const pin = demoPin()
+  const resp = await fetch(`/api/disputes/${encodeURIComponent(id)}/resolve`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...(pin ? { 'X-Demo-Pin': pin } : {}) },
+    body: JSON.stringify({ action }),
+  })
+  const body = await resp.json()
+  if (!resp.ok) throw new Error(body.detail ?? `${resp.status} ${resp.statusText}`)
+  return body
 }

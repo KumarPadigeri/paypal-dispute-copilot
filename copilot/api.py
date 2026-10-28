@@ -16,7 +16,7 @@ from fastapi.staticfiles import StaticFiles
 from httpx import HTTPStatusError
 from pydantic import BaseModel
 
-from copilot.advice import advise
+from copilot.advice import advise, available
 from copilot.demo import REPLAYS, DemoGate, load_replay, play
 from copilot.evidence import REASONS, gather_case
 from copilot.paypal_client import PayPalClient
@@ -50,6 +50,10 @@ def sse(name: str, data: dict) -> str:
 
 class PinCheck(BaseModel):
     pin: str
+
+
+class ResolveRequest(BaseModel):
+    action: str  # a key of copilot.advice.RESOLUTIONS
 
 
 WEB_DIST = Path(__file__).parent.parent / "web" / "dist"
@@ -112,7 +116,13 @@ def create_app(
         return {
             **asdict(case),
             "claims": [{"id": f"C{i}", "text": c} for i, c in enumerate(split_claims(case), 1)],
-            "advice": asdict(advice) if advice else None,
+            "advice": {
+                **asdict(advice),
+                # only what PayPal allows right now, with the exact note that will be sent
+                "resolutions": [asdict(r) for r in available(advice, case.actions)],
+            }
+            if advice
+            else None,
         }
 
     @app.get("/api/demo")
@@ -198,6 +208,33 @@ def create_app(
         pp(request).provide_evidence(dispute_id, evidences)
         request.app.state.verified.pop(dispute_id)
         return {"sent": True, "status": pp(request).get_dispute(dispute_id)["status"]}
+
+    @app.post("/api/disputes/{dispute_id}/resolve")
+    def resolve(
+        dispute_id: str,
+        body: ResolveRequest,
+        request: Request,
+        x_demo_pin: str | None = Header(default=None),
+    ) -> dict:
+        """The merchant's approval of an advised resolution (refund now / refund after return).
+
+        Only resolutions the advice suggests AND PayPal allows right now; the note is fixed text.
+        """
+        if not request.app.state.gate.unlocked(x_demo_pin):
+            raise HTTPException(403, "Resolving needs the demo PIN")
+        case = load_case(request, dispute_id)
+        advice = advise(case)
+        allowed = {r.key: r for r in available(advice, case.actions)} if advice else {}
+        res = allowed.get(body.action)
+        if res is None:
+            raise HTTPException(409, "That resolution is not available on this case right now")
+        client = pp(request)
+        if res.key == "refund":
+            client.accept_claim(dispute_id, res.note)
+        else:
+            amount = client.get_dispute(dispute_id)["dispute_amount"]
+            client.make_offer(dispute_id, res.note, "REFUND_WITH_RETURN", amount)
+        return {"done": res.key, "status": client.get_dispute(dispute_id)["status"]}
 
     # The built web page (npm run build) is served from the same server, after the /api routes.
     if web_dir.is_dir():

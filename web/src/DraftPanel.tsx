@@ -137,7 +137,7 @@ export default function DraftPanel({
       )}
 
       {steps.length === 0 && draftBlocked && (
-        <p className="meta">Drafting is off for this case: there is no evidence a reply could cite.</p>
+        <p className="meta">Drafting is off: the evidence can't support a reply (see the note above).</p>
       )}
 
       {steps.length === 0 && !draftBlocked && (

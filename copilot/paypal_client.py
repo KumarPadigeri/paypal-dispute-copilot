@@ -62,6 +62,28 @@ class PayPalClient:
             raise RuntimeError(f"PayPal refused the evidence ({resp.status_code}): {resp.text}")
         return resp.json()
 
+    def accept_claim(self, dispute_id: str, note: str) -> dict:
+        """Refund in full and close the case in the buyer's favor (PayPal moves the money)."""
+        body = {"note": note, "accept_claim_type": "REFUND"}
+        resp = self._http.post(
+            f"/v1/customer/disputes/{dispute_id}/accept-claim",
+            headers=self._headers(),
+            files={"input": (None, json.dumps(body), "application/json")},
+        )
+        if resp.status_code >= 400:
+            raise RuntimeError(f"PayPal refused the refund ({resp.status_code}): {resp.text}")
+        return resp.json()
+
+    def make_offer(self, dispute_id: str, note: str, offer_type: str, amount: dict) -> dict:
+        """Offer the buyer a resolution; PayPal refunds if they accept."""
+        body = {"note": note, "offer_type": offer_type, "offer_amount": amount}
+        resp = self._http.post(
+            f"/v1/customer/disputes/{dispute_id}/make-offer", headers=self._headers(), json=body
+        )
+        if resp.status_code >= 400:
+            raise RuntimeError(f"PayPal refused the offer ({resp.status_code}): {resp.text}")
+        return resp.json()
+
     def list_trackers(self, transaction_id: str) -> list[dict]:
         return self._get("/v1/shipping/trackers", {"transaction_id": transaction_id}).get(
             "trackers", []

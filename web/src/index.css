@@ -1174,3 +1174,28 @@ th[aria-sort] .th-sort {
   font-size: 14px;
   color: var(--text);
 }
+
+.advice-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.advice-confirm {
+  margin-top: 12px;
+}
+
+.advice-confirm blockquote {
+  margin: 8px 0 0;
+  padding: 8px 12px;
+  border-left: 2px solid var(--warn);
+  background: var(--surface);
+  border-radius: 0 6px 6px 0;
+  font-size: 14px;
+}
+
+.advice .send-ok,
+.advice .send-bad {
+  margin-top: 10px;
+}

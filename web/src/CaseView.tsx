@@ -1,7 +1,15 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import DraftPanel from './DraftPanel'
 import { AlertIcon, CloseIcon, CopyIcon } from './icons'
-import { type CaseDetail, REQUESTED, type Sentence, formatAmount, getCase, statusOf } from './api'
+import {
+  type CaseDetail,
+  REQUESTED,
+  type Sentence,
+  formatAmount,
+  getCase,
+  resolveCase,
+  statusOf,
+} from './api'
 
 export default function CaseView({ id, onClose }: { id: string; onClose: () => void }) {
   const [c, setCase] = useState<CaseDetail | null>(null)
@@ -66,15 +74,7 @@ export default function CaseView({ id, onClose }: { id: string; onClose: () => v
         )}
       </section>
 
-      {c.advice && (
-        <section className="advice" role="note">
-          <AlertIcon />
-          <div>
-            <h3>{c.advice.title}</h3>
-            <p>{c.advice.text}</p>
-          </div>
-        </section>
-      )}
+      {c.advice && <AdviceBox disputeId={c.dispute_id} advice={c.advice} amount={c.amount} onDone={load} />}
 
       <div className="columns">
         <div className="stack">
@@ -142,5 +142,69 @@ function CopyButton({ text }: { text: string }) {
         {copied ? 'Copied' : ''}
       </span>
     </>
+  )
+}
+
+type AdviceProps = {
+  disputeId: string
+  advice: NonNullable<CaseDetail['advice']>
+  amount: string
+  onDone: () => void
+}
+
+/** Plain-code advice, plus the fair ways out PayPal allows right now (merchant confirms first). */
+function AdviceBox({ disputeId, advice, amount, onDone }: AdviceProps) {
+  const [picked, setPicked] = useState<string | null>(null)
+  const [state, setState] = useState<{ ok: boolean; text: string } | null>(null)
+  const choice = advice.resolutions.find((r) => r.key === picked)
+
+  const confirm = async () => {
+    if (!choice) return
+    setState({ ok: true, text: 'Sending to PayPal…' })
+    try {
+      const r = await resolveCase(disputeId, choice.key)
+      setPicked(null)
+      setState({ ok: true, text: `Done. PayPal status: ${statusOf(r.status).label}` })
+      onDone()
+    } catch (err) {
+      const msg = (err as Error).message
+      setState({ ok: false, text: msg.includes('PIN') ? 'This needs the demo PIN (unlock it in “Your reply” below).' : msg })
+    }
+  }
+
+  return (
+    <section className="advice" role="note">
+      <AlertIcon />
+      <div>
+        <h3>{advice.title}</h3>
+        <p>{advice.text}</p>
+        {advice.resolutions.length > 0 && !choice && (
+          <div className="advice-actions">
+            {advice.resolutions.map((r) => (
+              <button key={r.key} className="btn" onClick={() => setPicked(r.key)}>
+                {r.label}
+              </button>
+            ))}
+          </div>
+        )}
+        {choice && (
+          <div className="advice-confirm">
+            <p>
+              <strong>{choice.label}</strong> ({formatAmount(amount)}). PayPal will receive this note:
+            </p>
+            <blockquote>{choice.note}</blockquote>
+            <div className="advice-actions">
+              <button className="btn primary" onClick={confirm} autoFocus>
+                Yes, {choice.label.toLowerCase()}
+              </button>
+              <button className="btn" onClick={() => setPicked(null)}>
+                Cancel
+              </button>
+            </div>
+          </div>
+        )}
+        {state && <p className={state.ok ? 'send-ok' : 'send-bad'}>{state.text}</p>}
+      </div>
+    </section>
   )
 }
