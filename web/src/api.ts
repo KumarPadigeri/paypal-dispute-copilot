@@ -61,6 +61,7 @@ export type CaseDetail = {
   claims: Claim[]
   actions: string[]
   shipments: { carrier: string; tracking_number: string }[]
+  advice: { title: string; text: string; blocks_draft: boolean } | null
 }
 
 export const getCase = (id: string) => getJson<CaseDetail>(`/api/disputes/${encodeURIComponent(id)}`)

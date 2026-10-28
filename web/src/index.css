@@ -1142,3 +1142,35 @@ th[aria-sort] .th-sort {
   clip: rect(0 0 0 0);
   white-space: nowrap;
 }
+
+
+/* Plain-code advice (e.g. no proof of shipping): calm amber note, not an error */
+.advice {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 12px;
+  align-items: start;
+  background: var(--warn-soft);
+  border: 1px solid var(--warn);
+  border-radius: var(--radius);
+  padding: 14px 18px;
+  margin-bottom: 16px;
+}
+
+.advice svg {
+  color: var(--warn);
+  margin-top: 2px;
+}
+
+.advice h3 {
+  margin: 0 0 4px;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--warn);
+}
+
+.advice p {
+  margin: 0;
+  font-size: 14px;
+  color: var(--text);
+}

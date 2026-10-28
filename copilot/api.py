@@ -16,6 +16,7 @@ from fastapi.staticfiles import StaticFiles
 from httpx import HTTPStatusError
 from pydantic import BaseModel
 
+from copilot.advice import advise
 from copilot.demo import REPLAYS, DemoGate, load_replay, play
 from copilot.evidence import REASONS, gather_case
 from copilot.paypal_client import PayPalClient
@@ -107,9 +108,11 @@ def create_app(
     @app.get("/api/disputes/{dispute_id}")
     def get_case(dispute_id: str, request: Request) -> dict:
         case = load_case(request, dispute_id)
+        advice = advise(case)
         return {
             **asdict(case),
             "claims": [{"id": f"C{i}", "text": c} for i, c in enumerate(split_claims(case), 1)],
+            "advice": asdict(advice) if advice else None,
         }
 
     @app.get("/api/demo")
@@ -132,6 +135,13 @@ def create_app(
         recorded real run, which costs nothing and can never be sent.
         """
         case = load_case(request, dispute_id)
+        advice = advise(case)
+        if advice and advice.blocks_draft:
+            # Checked before the PIN/cap: no AI call, nothing counted.
+            async def refuse():
+                yield sse("error", {"message": f"{advice.title}. {advice.text}"})
+
+            return StreamingResponse(refuse(), media_type="text/event-stream")
         g: DemoGate = request.app.state.gate
         live = g.unlocked(pin) and g.take_live()
         why = None if live else ("limit" if g.unlocked(pin) else "locked")

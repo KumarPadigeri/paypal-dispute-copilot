@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import DraftPanel from './DraftPanel'
-import { CloseIcon, CopyIcon } from './icons'
+import { AlertIcon, CloseIcon, CopyIcon } from './icons'
 import { type CaseDetail, REQUESTED, type Sentence, formatAmount, getCase, statusOf } from './api'
 
 export default function CaseView({ id, onClose }: { id: string; onClose: () => void }) {
@@ -66,6 +66,16 @@ export default function CaseView({ id, onClose }: { id: string; onClose: () => v
         )}
       </section>
 
+      {c.advice && (
+        <section className="advice" role="note">
+          <AlertIcon />
+          <div>
+            <h3>{c.advice.title}</h3>
+            <p>{c.advice.text}</p>
+          </div>
+        </section>
+      )}
+
       <div className="columns">
         <div className="stack">
           <section className="panel">
@@ -87,6 +97,7 @@ export default function CaseView({ id, onClose }: { id: string; onClose: () => v
             evidence={c.evidence}
             canSend={canSend}
             cantSendReason={cantSendReason}
+            draftBlocked={c.advice?.blocks_draft ?? false}
             onFocus={setFocus}
             onSent={load}
           />

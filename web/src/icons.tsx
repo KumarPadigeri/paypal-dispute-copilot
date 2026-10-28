@@ -74,3 +74,10 @@ export const CopyIcon = () => (
     <path d="M10.5 5.5V4A1.5 1.5 0 009 2.5H4A1.5 1.5 0 002.5 4v5A1.5 1.5 0 004 10.5h1.5" />
   </svg>
 )
+
+export const AlertIcon = () => (
+  <svg {...base} width={18} height={18}>
+    <path d="M8 2.2l6.2 11H1.8L8 2.2z" />
+    <path d="M8 6.5v3M8 11.5h.01" />
+  </svg>
+)

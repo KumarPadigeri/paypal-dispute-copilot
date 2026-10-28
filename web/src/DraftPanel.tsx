@@ -50,11 +50,20 @@ type Props = {
   evidence: Evidence[]
   canSend: boolean
   cantSendReason: string | null
+  draftBlocked: boolean // the evidence cannot support a reply (see the advice above)
   onFocus: (s: Sentence | null) => void
   onSent: () => void
 }
 
-export default function DraftPanel({ disputeId, evidence, canSend, cantSendReason, onFocus, onSent }: Props) {
+export default function DraftPanel({
+  disputeId,
+  evidence,
+  canSend,
+  cantSendReason,
+  draftBlocked,
+  onFocus,
+  onSent,
+}: Props) {
   const [steps, setSteps] = useState<Step[]>([])
   const [running, setRunning] = useState(false)
   const [final, setFinal] = useState<FinalDraft | null>(null)
@@ -112,7 +121,7 @@ export default function DraftPanel({ disputeId, evidence, canSend, cantSendReaso
     <section className="panel draft">
       <div className="draft-head">
         <h3 className="section-title">Your reply</h3>
-        <button className="btn" onClick={start} disabled={running}>
+        <button className="btn" onClick={start} disabled={running || draftBlocked}>
           {running ? 'Working…' : final ? 'Draft again' : 'Draft reply'}
         </button>
       </div>
@@ -127,7 +136,11 @@ export default function DraftPanel({ disputeId, evidence, canSend, cantSendReaso
         </p>
       )}
 
-      {steps.length === 0 && (
+      {steps.length === 0 && draftBlocked && (
+        <p className="meta">Drafting is off for this case: there is no evidence a reply could cite.</p>
+      )}
+
+      {steps.length === 0 && !draftBlocked && (
         <p className="meta">
           The Writer drafts from PayPal's evidence only. The Verifier then checks every sentence and removes anything
           the evidence does not prove. Nothing is sent until you approve.
