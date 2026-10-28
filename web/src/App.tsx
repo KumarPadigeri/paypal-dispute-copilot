@@ -1,17 +1,35 @@
 import { useEffect, useState } from 'react'
+import type { JSX } from 'react'
 import CaseView from './CaseView'
+import { CheckIcon, ClockIcon, ReplyIcon } from './icons'
 import { type DisputeSummary, formatDate, formatMoney, listDisputes, statusOf } from './api'
 
-// Status filters, in the seller's words.
-const FILTERS: { key: string; label: string; match: (status: string) => boolean }[] = [
-  { key: 'all', label: 'All', match: () => true },
-  { key: 'reply', label: 'Needs reply', match: (s) => s === 'WAITING_FOR_SELLER_RESPONSE' },
+// Status filters, in the seller's words, each with its own icon and color.
+type Filter = {
+  key: string
+  label: string
+  tone: 'all' | 'warn' | 'info' | 'ok'
+  Icon: (() => JSX.Element) | null
+  match: (status: string) => boolean
+}
+
+const FILTERS: Filter[] = [
+  { key: 'all', label: 'All', tone: 'all', Icon: null, match: () => true },
+  {
+    key: 'reply',
+    label: 'Needs reply',
+    tone: 'warn',
+    Icon: ReplyIcon,
+    match: (s) => s === 'WAITING_FOR_SELLER_RESPONSE',
+  },
   {
     key: 'waiting',
     label: 'Waiting',
+    tone: 'info',
+    Icon: ClockIcon,
     match: (s) => s === 'WAITING_FOR_BUYER_RESPONSE' || s === 'UNDER_REVIEW',
   },
-  { key: 'closed', label: 'Closed', match: (s) => s === 'RESOLVED' },
+  { key: 'closed', label: 'Closed', tone: 'ok', Icon: CheckIcon, match: (s) => s === 'RESOLVED' },
 ]
 
 const needsReply = (d: DisputeSummary) => Number(d.status === 'WAITING_FOR_SELLER_RESPONSE')
@@ -43,11 +61,13 @@ function DisputeList({ openId, onOpen }: { openId: string | null; onOpen: (id: s
         {FILTERS.map((f) => (
           <button
             key={f.key}
-            className={`chip ${filter === f.key ? 'on' : ''}`}
+            className={`chip tone-${f.tone} ${filter === f.key ? 'on' : ''}`}
             aria-pressed={filter === f.key}
             onClick={() => setFilter(f.key)}
           >
-            {f.label} <span className="count">{disputes.filter((d) => f.match(d.status)).length}</span>
+            {f.Icon && <f.Icon />}
+            {f.label}
+            <span className="count">{disputes.filter((d) => f.match(d.status)).length}</span>
           </button>
         ))}
       </div>

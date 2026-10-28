@@ -1,13 +1,17 @@
-import { useEffect, useState } from 'react'
-import { type CaseDetail, REQUESTED, formatAmount, getCase, statusOf } from './api'
+import { useCallback, useEffect, useState } from 'react'
+import DraftPanel from './DraftPanel'
+import { type CaseDetail, REQUESTED, type Sentence, formatAmount, getCase, statusOf } from './api'
 
 export default function CaseView({ id, onBack }: { id: string; onBack: () => void }) {
   const [c, setCase] = useState<CaseDetail | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [focus, setFocus] = useState<Sentence | null>(null)
 
-  useEffect(() => {
+  const load = useCallback(() => {
     getCase(id).then(setCase, (e: Error) => setError(e.message))
   }, [id])
+
+  useEffect(load, [load])
 
   const back = (
     <button className="back" onClick={onBack}>
@@ -19,6 +23,12 @@ export default function CaseView({ id, onBack }: { id: string; onBack: () => voi
 
   const status = statusOf(c.status)
   const requested = c.requested_from_seller.map((r) => REQUESTED[r] ?? r)
+  const cites = new Set(focus?.cites ?? [])
+  const answers = new Set(focus?.answers ?? [])
+  const canSend = c.status === 'WAITING_FOR_SELLER_RESPONSE' && c.actions.includes('provide_evidence')
+  const cantSendReason = canSend
+    ? null
+    : `PayPal isn't waiting for your reply on this case (${status.label.toLowerCase()}).`
 
   return (
     <>
@@ -45,25 +55,35 @@ export default function CaseView({ id, onBack }: { id: string; onBack: () => voi
       </section>
 
       <div className="columns">
-        <section className="panel">
-          <h3 className="section-title">What the buyer says</h3>
-          {c.claims.length === 0 && <p className="meta">The buyer left no message.</p>}
-          <ol className="items">
-            {c.claims.map((cl) => (
-              <li key={cl.id} className="item">
-                <span className="badge claim">{cl.id}</span>
-                <span>“{cl.text}”</span>
-              </li>
-            ))}
-          </ol>
-          <p className="hint">Claims are answered, never used as proof.</p>
-        </section>
+        <div className="stack">
+          <section className="panel">
+            <h3 className="section-title">What the buyer says</h3>
+            {c.claims.length === 0 && <p className="meta">The buyer left no message.</p>}
+            <ol className="items">
+              {c.claims.map((cl) => (
+                <li key={cl.id} className={`item ${answers.has(cl.id) ? 'lit' : ''}`}>
+                  <span className="badge claim">{cl.id}</span>
+                  <span>“{cl.text}”</span>
+                </li>
+              ))}
+            </ol>
+            <p className="hint">Claims are answered, never used as proof.</p>
+          </section>
 
-        <section className="panel">
+          <DraftPanel
+            disputeId={c.dispute_id}
+            canSend={canSend}
+            cantSendReason={cantSendReason}
+            onFocus={setFocus}
+            onSent={load}
+          />
+        </div>
+
+        <section className="panel evidence-panel">
           <h3 className="section-title">Evidence from PayPal</h3>
           <ol className="items">
             {c.evidence.map((e) => (
-              <li key={e.id} className="item">
+              <li key={e.id} className={`item ${cites.has(e.id) ? 'lit' : focus ? 'dim' : ''}`}>
                 <span className="badge">{e.id}</span>
                 <span>
                   {e.text}

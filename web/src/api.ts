@@ -64,3 +64,50 @@ export const formatAmount = (amount: string) => {
   const [value, currency] = amount.split(' ')
   return formatMoney({ value, currency_code: currency })
 }
+
+// Live draft (server-sent events from /api/disputes/{id}/draft)
+export type Sentence = { text: string; cites: string[]; answers: string[] }
+export type Verdict = { sentence: string; supported: boolean; reason: string | null }
+export type FinalDraft = {
+  sentences: Sentence[]
+  removed: { sentence: string; reason: string }[]
+  rounds: number
+  answered: string[]
+  reply: string
+}
+
+export type DraftEvent =
+  | { name: 'writing' | 'verifying'; data: { round: number } }
+  | { name: 'draft'; data: { round: number; sentences: Sentence[] } }
+  | { name: 'verdicts'; data: { round: number; verdicts: Verdict[] } }
+  | { name: 'rewriting'; data: { round: number; rejected: number } }
+  | { name: 'final'; data: FinalDraft }
+  | { name: 'error'; data: { message: string } }
+
+const DRAFT_EVENTS = ['writing', 'draft', 'verifying', 'verdicts', 'rewriting', 'final', 'error'] as const
+
+/** Opens the stream; returns a function that stops it. */
+export function streamDraft(id: string, onEvent: (e: DraftEvent) => void): () => void {
+  const source = new EventSource(`/api/disputes/${encodeURIComponent(id)}/draft`)
+  for (const name of DRAFT_EVENTS) {
+    source.addEventListener(name, (msg) => {
+      onEvent({ name, data: JSON.parse((msg as MessageEvent).data) } as DraftEvent)
+      if (name === 'final' || name === 'error') source.close()
+    })
+  }
+  // A dropped connection would otherwise make the browser retry and re-run the agents.
+  source.onerror = () => {
+    if (source.readyState !== EventSource.CLOSED) {
+      source.close()
+      onEvent({ name: 'error', data: { message: 'Connection to the server was lost.' } })
+    }
+  }
+  return () => source.close()
+}
+
+export async function sendReply(id: string): Promise<{ sent: boolean; status: string }> {
+  const resp = await fetch(`/api/disputes/${encodeURIComponent(id)}/send`, { method: 'POST' })
+  const body = await resp.json()
+  if (!resp.ok) throw new Error(body.detail ?? `${resp.status} ${resp.statusText}`)
+  return body
+}

@@ -2,7 +2,10 @@
 
 Uses the installed Google Chrome through Playwright. Needs the API and Vite running.
 
-Run: .venv/bin/python -m scripts.screenshots <out_dir> [path=/] [name=page]
+Run: .venv/bin/python -m scripts.screenshots <out_dir> [path=/] [name=page] [--draft]
+
+--draft clicks "Draft reply", waits for the verified reply and points at its first
+sentence (runs the real agents once per size; never clicks send).
 """
 
 import sys
@@ -15,11 +18,13 @@ BASE = "http://localhost:5173"
 
 
 def main() -> None:
-    if len(sys.argv) < 2:
+    draft = "--draft" in sys.argv
+    args = [a for a in sys.argv[1:] if a != "--draft"]
+    if not args:
         sys.exit(__doc__)
-    out = Path(sys.argv[1])
-    path = sys.argv[2] if len(sys.argv) > 2 else "/"
-    name = sys.argv[3] if len(sys.argv) > 3 else "page"
+    out = Path(args[0])
+    path = args[1] if len(args) > 1 else "/"
+    name = args[2] if len(args) > 2 else "page"
     out.mkdir(parents=True, exist_ok=True)
 
     with sync_playwright() as p:
@@ -33,6 +38,10 @@ def main() -> None:
                 has_touch=phone,
             )
             page.goto(BASE + path, wait_until="networkidle")
+            if draft:
+                page.get_by_role("button", name="Draft reply").click()
+                page.get_by_text("Verified reply ready").wait_for(timeout=180_000)
+                page.locator(".sentence").first.hover()
             overflow = page.evaluate("document.documentElement.scrollWidth - innerWidth")
             file = out / f"{name}-{w}.png"
             page.screenshot(path=file, full_page=True)
