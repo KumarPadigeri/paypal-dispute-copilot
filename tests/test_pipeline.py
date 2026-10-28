@@ -8,7 +8,7 @@ from copilot.evidence import build_case
 from copilot.pipeline import draft_reply
 from copilot.verifier import Verdict
 from copilot.verifier import build_prompt as verifier_prompt
-from copilot.writer import Draft, Sentence
+from copilot.writer import CLOSING, Draft, Sentence
 
 FIXTURES = Path(__file__).parent / "fixtures"
 CASE = build_case(
@@ -37,7 +37,10 @@ def run(drafts: list[Draft], judge) -> tuple:
             for i, s in enumerate(draft.sentences, start=1)
         ]
 
-    return asyncio.run(draft_reply(CASE, write, verify)), calls
+    result = asyncio.run(draft_reply(CASE, write, verify))
+    assert result.draft.sentences[-1].text == CLOSING  # code always adds the closing request
+    result.draft.sentences = result.draft.sentences[:-1]
+    return result, calls
 
 
 def test_clean_draft_passes_in_one_round():
@@ -79,3 +82,12 @@ def test_verifier_sees_only_the_cited_evidence():
     assert "shipped via USPS" in p
     assert "49.99 USD" not in p  # E1 is not cited, so not shown
     assert "has not arrived" not in p  # buyer claims never reach the Verifier
+
+
+def test_closing_request_is_written_by_code_and_cites_what_the_reply_used():
+    from copilot.writer import with_closing
+
+    closed = with_closing(Draft(sentences=[GOOD, FIXED]))
+    assert closed.sentences[-1] == Sentence(text=CLOSING, cites=["E4", "E5"])
+    assert with_closing(closed) == closed  # never added twice
+    assert with_closing(Draft(sentences=[])).sentences == []  # nothing proven: no request

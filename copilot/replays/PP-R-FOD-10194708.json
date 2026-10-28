@@ -1,5 +1,5 @@
 {
- "recorded": "2026-10-28T00:21:25+00:00",
+ "recorded": "2026-10-28T18:51:36+00:00",
  "events": [
   {
    "t": 0.0,
@@ -9,13 +9,13 @@
    }
   },
   {
-   "t": 2.87,
+   "t": 2.45,
    "name": "draft",
    "data": {
     "round": 1,
     "sentences": [
      {
-      "text": "The order was fulfilled by shipment via USPS on Oct 27, 2026, and PayPal shows the tracking status as SHIPPED with tracking number 9400111899561234567890.",
+      "text": "The order was shipped via USPS on Oct 27, 2026, and PayPal tracking shows status SHIPPED with tracking number 9400111899561234567890.",
       "cites": [
        "E4"
       ],
@@ -24,65 +24,52 @@
       ]
      },
      {
-      "text": "The payment was made on Oct 27, 2026, and the buyer opened the case on the same date, so the claim that the item had not arrived was made immediately after shipment was created.",
+      "text": "PayPal records the shipment and the case opening on the same day, Oct 27, 2026.",
       "cites": [
-       "E1",
-       "E4",
-       "E5"
+       "E5",
+       "E6"
       ],
       "answers": []
      },
      {
-      "text": "The order was for 1 Ceramic Pour-Over Coffee Set, matching the purchased item.",
+      "text": "The payment was made on Oct 27, 2026 for 1 \u00d7 Ceramic Pour-Over Coffee Set, and PayPal marks this payment as eligible for Expanded Seller Protection.",
       "cites": [
-       "E2"
+       "E1",
+       "E2",
+       "E3"
       ],
       "answers": [
        "C1"
-      ]
-     },
-     {
-      "text": "Please close the case in the seller's favor based on the shipment and tracking evidence provided.",
-      "cites": [
-       "E4"
-      ],
-      "answers": [
-       "C4"
       ]
      }
     ]
    }
   },
   {
-   "t": 2.87,
+   "t": 2.45,
    "name": "verifying",
    "data": {
     "round": 1
    }
   },
   {
-   "t": 4.39,
+   "t": 4.12,
    "name": "verdicts",
    "data": {
     "round": 1,
     "verdicts": [
      {
-      "sentence": "The order was fulfilled by shipment via USPS on Oct 27, 2026, and PayPal shows the tracking status as SHIPPED with tracking number 9400111899561234567890.",
+      "sentence": "The order was shipped via USPS on Oct 27, 2026, and PayPal tracking shows status SHIPPED with tracking number 9400111899561234567890.",
       "supported": true,
       "reason": null
      },
      {
-      "sentence": "The payment was made on Oct 27, 2026, and the buyer opened the case on the same date, so the claim that the item had not arrived was made immediately after shipment was created.",
-      "supported": false,
-      "reason": "The words \"so the claim that the item had not arrived was made immediately after shipment was created\" go too far; the evidence only shows payment, shipment, and case opening on the same date, not that it was immediately after shipment."
-     },
-     {
-      "sentence": "The order was for 1 Ceramic Pour-Over Coffee Set, matching the purchased item.",
+      "sentence": "PayPal records the shipment and the case opening on the same day, Oct 27, 2026.",
       "supported": true,
       "reason": null
      },
      {
-      "sentence": "Please close the case in the seller's favor based on the shipment and tracking evidence provided.",
+      "sentence": "The payment was made on Oct 27, 2026 for 1 \u00d7 Ceramic Pour-Over Coffee Set, and PayPal marks this payment as eligible for Expanded Seller Protection.",
       "supported": true,
       "reason": null
      }
@@ -90,107 +77,13 @@
    }
   },
   {
-   "t": 4.39,
-   "name": "rewriting",
-   "data": {
-    "round": 2,
-    "rejected": 1
-   }
-  },
-  {
-   "t": 6.24,
-   "name": "draft",
-   "data": {
-    "round": 2,
-    "sentences": [
-     {
-      "text": "The order for 1 Ceramic Pour-Over Coffee Set was shipped via USPS on Oct 27, 2026, with tracking number 9400111899561234567890 and PayPal tracking status SHIPPED.",
-      "cites": [
-       "E2",
-       "E4"
-      ],
-      "answers": [
-       "C2"
-      ]
-     },
-     {
-      "text": "The payment was made on Oct 27, 2026, and the buyer opened the case on Oct 27, 2026.",
-      "cites": [
-       "E1",
-       "E5"
-      ],
-      "answers": [
-       "C1",
-       "C2"
-      ]
-     },
-     {
-      "text": "The evidence shows a shipped physical item and Eligible Expanded Seller Protection for this payment.",
-      "cites": [
-       "E2",
-       "E3",
-       "E4"
-      ],
-      "answers": []
-     },
-     {
-      "text": "Please close the case in the seller's favor based on the shipment and protection evidence.",
-      "cites": [
-       "E3",
-       "E4"
-      ],
-      "answers": [
-       "C4"
-      ]
-     }
-    ]
-   }
-  },
-  {
-   "t": 6.24,
-   "name": "verifying",
-   "data": {
-    "round": 2
-   }
-  },
-  {
-   "t": 8.09,
-   "name": "verdicts",
-   "data": {
-    "round": 2,
-    "verdicts": [
-     {
-      "sentence": "The order for 1 Ceramic Pour-Over Coffee Set was shipped via USPS on Oct 27, 2026, with tracking number 9400111899561234567890 and PayPal tracking status SHIPPED.",
-      "supported": true,
-      "reason": null
-     },
-     {
-      "sentence": "The payment was made on Oct 27, 2026, and the buyer opened the case on Oct 27, 2026.",
-      "supported": true,
-      "reason": null
-     },
-     {
-      "sentence": "The evidence shows a shipped physical item and Eligible Expanded Seller Protection for this payment.",
-      "supported": true,
-      "reason": null
-     },
-     {
-      "sentence": "Please close the case in the seller's favor based on the shipment and protection evidence.",
-      "supported": true,
-      "reason": null
-     }
-    ]
-   }
-  },
-  {
-   "t": 8.09,
+   "t": 4.12,
    "name": "final",
    "data": {
     "sentences": [
      {
-      "text": "The order for 1 Ceramic Pour-Over Coffee Set was shipped via USPS on Oct 27, 2026, with tracking number 9400111899561234567890 and PayPal tracking status SHIPPED.",
+      "text": "The order was shipped via USPS on Oct 27, 2026, and PayPal tracking shows status SHIPPED with tracking number 9400111899561234567890.",
       "cites": [
-       "E2",
        "E4"
       ],
       "answers": [
@@ -198,44 +91,44 @@
       ]
      },
      {
-      "text": "The payment was made on Oct 27, 2026, and the buyer opened the case on Oct 27, 2026.",
+      "text": "PayPal records the shipment and the case opening on the same day, Oct 27, 2026.",
       "cites": [
-       "E1",
-       "E5"
-      ],
-      "answers": [
-       "C1",
-       "C2"
-      ]
-     },
-     {
-      "text": "The evidence shows a shipped physical item and Eligible Expanded Seller Protection for this payment.",
-      "cites": [
-       "E2",
-       "E3",
-       "E4"
+       "E5",
+       "E6"
       ],
       "answers": []
      },
      {
-      "text": "Please close the case in the seller's favor based on the shipment and protection evidence.",
+      "text": "The payment was made on Oct 27, 2026 for 1 \u00d7 Ceramic Pour-Over Coffee Set, and PayPal marks this payment as eligible for Expanded Seller Protection.",
       "cites": [
-       "E3",
-       "E4"
+       "E1",
+       "E2",
+       "E3"
       ],
       "answers": [
-       "C4"
+       "C1"
       ]
+     },
+     {
+      "text": "Based on this evidence, we ask PayPal to close the case in the seller's favor.",
+      "cites": [
+       "E1",
+       "E2",
+       "E3",
+       "E4",
+       "E5",
+       "E6"
+      ],
+      "answers": []
      }
     ],
     "removed": [],
-    "rounds": 2,
+    "rounds": 1,
     "answered": [
      "C1",
-     "C2",
-     "C4"
+     "C2"
     ],
-    "reply": "The order for 1 Ceramic Pour-Over Coffee Set was shipped via USPS on Oct 27, 2026, with tracking number 9400111899561234567890 and PayPal tracking status SHIPPED. The payment was made on Oct 27, 2026, and the buyer opened the case on Oct 27, 2026. The evidence shows a shipped physical item and Eligible Expanded Seller Protection for this payment. Please close the case in the seller's favor based on the shipment and protection evidence."
+    "reply": "The order was shipped via USPS on Oct 27, 2026, and PayPal tracking shows status SHIPPED with tracking number 9400111899561234567890. PayPal records the shipment and the case opening on the same day, Oct 27, 2026. The payment was made on Oct 27, 2026 for 1 \u00d7 Ceramic Pour-Over Coffee Set, and PayPal marks this payment as eligible for Expanded Seller Protection. Based on this evidence, we ask PayPal to close the case in the seller's favor."
    }
   }
  ]

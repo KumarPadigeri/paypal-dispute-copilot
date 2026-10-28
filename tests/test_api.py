@@ -7,7 +7,7 @@ from fastapi.testclient import TestClient
 from copilot.api import create_app
 from copilot.demo import DemoGate
 from copilot.verifier import Verdict
-from copilot.writer import Draft, Sentence
+from copilot.writer import CLOSING, Draft, Sentence
 
 FIXTURES = Path(__file__).parent / "fixtures"
 DISPUTE = json.loads((FIXTURES / "dispute_not_received.json").read_text())
@@ -89,7 +89,7 @@ def test_case_has_claims_evidence_actions_and_shipments():
         "id": "C2",
         "text": "It has not arrived and I have no tracking information.",
     }
-    assert [e["id"] for e in case["evidence"]] == ["E1", "E2", "E3", "E4", "E5"]
+    assert [e["id"] for e in case["evidence"]] == ["E1", "E2", "E3", "E4", "E5", "E6"]
     assert case["evidence"][3]["source"].startswith("PayPal tracking record")
     assert "provide_evidence" in case["actions"]
     assert case["shipments"][0]["carrier"] == "USPS"
@@ -122,7 +122,7 @@ def test_draft_streams_each_step_then_the_verified_reply():
         "reason": "adds a time order",
     }
     final = evs[-1][1]
-    assert final["reply"] == GOOD.text
+    assert final["reply"] == f"{GOOD.text} {CLOSING}"
     assert final["answered"] == ["C2"]
     assert final["rounds"] == 2
 
@@ -140,7 +140,7 @@ def test_send_sends_exactly_the_verified_reply_once():
     assert resp.status_code == 200
     [(dispute_id, [ev])] = paypal.sent
     assert dispute_id == "PP-R-FOD-10194708"
-    assert ev["notes"] == GOOD.text
+    assert ev["notes"] == f"{GOOD.text} {CLOSING}"
     assert ev["evidence_info"]["tracking_info"][0]["tracking_number"] == "9400111899561234567890"
     # A second click without a new verified draft sends nothing.
     assert client.post("/api/disputes/PP-R-FOD-10194708/send").status_code == 409

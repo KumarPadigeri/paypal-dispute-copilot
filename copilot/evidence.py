@@ -112,6 +112,20 @@ def evidence_from_dispute(d: dict, trackers: list[dict] | None = None) -> list[E
         )
     )
 
+    # A comparison computed by code, so the Writer can cite it instead of inferring it.
+    opened = d["create_time"][:10]
+    for tr in trackers or []:
+        forward = tr.get("shipment_direction", "FORWARD") == "FORWARD"
+        if forward and tr.get("shipment_date") == opened:
+            facts.append(
+                (
+                    "PayPal's records date the shipment and the case opening on the same day, "
+                    f"{shipment_day(opened)}.",
+                    f"Compared from PayPal tracking record and {src}",
+                )
+            )
+            break
+
     return [Evidence(f"E{i}", text, source) for i, (text, source) in enumerate(facts, start=1)]
 
 

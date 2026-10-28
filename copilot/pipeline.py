@@ -8,7 +8,14 @@ from dataclasses import dataclass, field
 
 from copilot.evidence import DisputeCase
 from copilot.verifier import Verdict
-from copilot.writer import Draft, Sentence, answered_claims, render, sentence_problems
+from copilot.writer import (
+    Draft,
+    Sentence,
+    answered_claims,
+    render,
+    sentence_problems,
+    with_closing,
+)
 
 WriteFn = Callable[[DisputeCase, str | None], Awaitable[Draft]]
 VerifyFn = Callable[[DisputeCase, Draft], Awaitable[list[Verdict]]]
@@ -91,7 +98,7 @@ async def draft_reply(
     rejected = await review(case, draft, verify)
     on_event("verdicts", {"round": 1, "verdicts": _verdicts(draft, rejected)})
     if not rejected:
-        return Result(draft=draft)
+        return Result(draft=with_closing(draft))
 
     first = [Rejection(draft.sentences[i].text, why) for i, why in rejected.items()]
     on_event("rewriting", {"round": 2, "rejected": len(first)})
@@ -103,4 +110,4 @@ async def draft_reply(
 
     kept: list[Sentence] = [s for i, s in enumerate(draft.sentences) if i not in rejected]
     removed = [Rejection(draft.sentences[i].text, why) for i, why in rejected.items()]
-    return Result(Draft(sentences=kept), removed, rounds=2, first_rejections=first)
+    return Result(with_closing(Draft(sentences=kept)), removed, rounds=2, first_rejections=first)

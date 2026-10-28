@@ -21,9 +21,12 @@ How to argue:
    If the evidence says nothing about a claim, leave it out: never deny or confirm it.
 3. Compare facts across evidence items, especially dates: when the item shipped
    versus when the case was opened. Such a sentence cites every item it uses.
+   State the comparison as plain facts ("the item shipped on Oct 27, 2026, the same
+   day the case was opened"). Dates have no times, so never claim an order, a cause
+   or an intent: no "before", "after", "immediately", "so", "which means", "fulfilled".
 4. No filler: do not restate the dispute reason or list facts that do not help.
-5. End by asking PayPal to close the case in the seller's favor, citing the
-   evidence that request rests on.
+   Never write about what the evidence does not contain.
+5. Do not write a closing request; the app adds it.
 
 Rules:
 - Use ONLY facts from the numbered evidence list. Never add facts, dates, amounts,
@@ -36,7 +39,7 @@ Rules:
 - Do not mention transaction ids or case ids. Tracking numbers may be quoted when
   they appear in the evidence.
 - Calm, factual and professional; no blame and no emotion.
-- 3 to 5 short sentences.
+- 2 to 4 short sentences.
 """
 
 ID_IN_TEXT = re.compile(r"\b[EC]\d+\b")
@@ -102,6 +105,17 @@ def check_citations(draft: Draft, case: DisputeCase) -> list[str]:
 
 def answered_claims(draft: Draft) -> set[str]:
     return {a for s in draft.sentences for a in s.answers}
+
+
+CLOSING = "Based on this evidence, we ask PayPal to close the case in the seller's favor."
+
+
+def with_closing(draft: Draft) -> Draft:
+    """Adds the fixed closing request (code, not the AI); it cites what the reply used."""
+    if not draft.sentences or draft.sentences[-1].text == CLOSING:
+        return draft
+    used = sorted({c for s in draft.sentences for c in s.cites}, key=lambda c: int(c[1:]))
+    return Draft(sentences=[*draft.sentences, Sentence(text=CLOSING, cites=used)])
 
 
 def render(draft: Draft) -> str:

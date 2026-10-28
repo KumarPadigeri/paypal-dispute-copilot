@@ -59,7 +59,17 @@ def test_tracking_becomes_shipping_evidence():
         "9400111899561234567890 (PayPal tracking status: SHIPPED)."
     )
     assert shipped[0].source.startswith("PayPal tracking record")
-    assert [e.id for e in ev] == ["E1", "E2", "E3", "E4", "E5"]
+    assert [e.id for e in ev] == ["E1", "E2", "E3", "E4", "E5", "E6"]
+
+
+def test_same_day_comparison_is_computed_by_code():
+    ev = build_case(load(), json.loads(TRACKERS.read_text())).evidence
+    assert ev[-1].text == (
+        "PayPal's records date the shipment and the case opening on the same day, Oct 27, 2026."
+    )
+    later = json.loads(TRACKERS.read_text())
+    later[0]["shipment_date"] = "2026-10-29"
+    assert not any("same day" in e.text for e in build_case(load(), later).evidence)
 
 
 def test_return_shipments_are_not_seller_shipping_evidence():
