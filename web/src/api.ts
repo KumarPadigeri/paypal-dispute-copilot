@@ -8,6 +8,8 @@ export type DisputeSummary = {
   reason: string
   amount: Money | null
   created: string | null
+  updated: string | null
+  stage: string | null // Inquiry, Chargeback, ...
 }
 
 async function getJson<T>(path: string): Promise<T> {
@@ -30,6 +32,17 @@ export const statusOf = (s: string) => STATUS[s] ?? { label: s, tone: 'muted' as
 
 export const formatMoney = (m: Money | null) =>
   m ? new Intl.NumberFormat('en-US', { style: 'currency', currency: m.currency_code }).format(Number(m.value)) : ''
+
+/** "5 min ago", "3 h ago", "2 days ago"; falls back to the date after a week. */
+export function formatAgo(iso: string | null): string {
+  if (!iso) return ''
+  const minutes = Math.round((Date.now() - new Date(iso).getTime()) / 60000)
+  if (minutes < 1) return 'just now'
+  if (minutes < 60) return `${minutes} min ago`
+  if (minutes < 60 * 24) return `${Math.round(minutes / 60)} h ago`
+  if (minutes < 60 * 24 * 7) return `${Math.round(minutes / 1440)} days ago`
+  return formatDate(iso)
+}
 
 export const formatDate = (iso: string | null) =>
   iso ? new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : ''

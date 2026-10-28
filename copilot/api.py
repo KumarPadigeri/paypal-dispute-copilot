@@ -18,6 +18,14 @@ from copilot.pipeline import VerifyFn, WriteFn, draft_reply
 from copilot.submit import NotSendable, build_evidences
 from copilot.writer import answered_claims, render, split_claims
 
+# PayPal's dispute stages in plain words, least to most serious.
+STAGES = {
+    "INQUIRY": "Inquiry",
+    "CHARGEBACK": "Chargeback",
+    "PRE_ARBITRATION": "Pre-arbitration",
+    "ARBITRATION": "Arbitration",
+}
+
 
 def real_agents() -> tuple[WriteFn, VerifyFn]:
     from copilot.llm import make_client
@@ -63,6 +71,8 @@ def create_app(
                 "reason": REASONS.get(d["reason"], d["reason"]),
                 "amount": d.get("dispute_amount"),
                 "created": d.get("create_time"),
+                "updated": d.get("update_time"),
+                "stage": STAGES.get(d.get("dispute_life_cycle_stage", ""), None),
             }
             for d in pp(request).list_disputes()
         ]

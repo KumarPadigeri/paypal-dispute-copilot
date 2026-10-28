@@ -39,3 +39,18 @@ export const CloseIcon = () => (
     <path d="M4 4l8 8M12 4l-8 8" />
   </svg>
 )
+
+export const ListIcon = () => (
+  <svg {...base}>
+    <path d="M5.5 4h8M5.5 8h8M5.5 12h8M2.5 4h.01M2.5 8h.01M2.5 12h.01" />
+  </svg>
+)
+
+export const GridIcon = () => (
+  <svg {...base}>
+    <rect x="2.5" y="2.5" width="4.5" height="4.5" rx="1" />
+    <rect x="9" y="2.5" width="4.5" height="4.5" rx="1" />
+    <rect x="2.5" y="9" width="4.5" height="4.5" rx="1" />
+    <rect x="9" y="9" width="4.5" height="4.5" rx="1" />
+  </svg>
+)

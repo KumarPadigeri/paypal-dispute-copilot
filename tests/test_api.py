@@ -77,6 +77,8 @@ def test_list_disputes_is_short_and_readable():
         "reason": "Item not received",
         "amount": {"currency_code": "USD", "value": "49.99"},
         "created": "2026-10-27T00:29:15.329Z",
+        "updated": "2026-10-27T00:32:43.893Z",
+        "stage": "Inquiry",
     }
 
 
