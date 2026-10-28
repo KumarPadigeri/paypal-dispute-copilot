@@ -90,6 +90,7 @@ export type FinalDraft = {
 }
 
 export type DraftEvent =
+  | { name: 'mode'; data: { live: boolean; why: 'locked' | 'limit' | null; live_left: number } }
   | { name: 'writing' | 'verifying'; data: { round: number } }
   | { name: 'draft'; data: { round: number; sentences: Sentence[] } }
   | { name: 'verdicts'; data: { round: number; verdicts: Verdict[] } }
@@ -97,11 +98,13 @@ export type DraftEvent =
   | { name: 'final'; data: FinalDraft }
   | { name: 'error'; data: { message: string } }
 
-const DRAFT_EVENTS = ['writing', 'draft', 'verifying', 'verdicts', 'rewriting', 'final', 'error'] as const
+const DRAFT_EVENTS = ['mode', 'writing', 'draft', 'verifying', 'verdicts', 'rewriting', 'final', 'error'] as const
 
 /** Opens the stream; returns a function that stops it. */
 export function streamDraft(id: string, onEvent: (e: DraftEvent) => void): () => void {
-  const source = new EventSource(`/api/disputes/${encodeURIComponent(id)}/draft`)
+  const pin = demoPin()
+  const query = pin ? `?pin=${encodeURIComponent(pin)}` : ''
+  const source = new EventSource(`/api/disputes/${encodeURIComponent(id)}/draft${query}`)
   for (const name of DRAFT_EVENTS) {
     source.addEventListener(name, (msg) => {
       onEvent({ name, data: JSON.parse((msg as MessageEvent).data) } as DraftEvent)
@@ -119,8 +122,44 @@ export function streamDraft(id: string, onEvent: (e: DraftEvent) => void): () =>
 }
 
 export async function sendReply(id: string): Promise<{ sent: boolean; status: string }> {
-  const resp = await fetch(`/api/disputes/${encodeURIComponent(id)}/send`, { method: 'POST' })
+  const pin = demoPin()
+  const resp = await fetch(`/api/disputes/${encodeURIComponent(id)}/send`, {
+    method: 'POST',
+    headers: pin ? { 'X-Demo-Pin': pin } : {},
+  })
   const body = await resp.json()
   if (!resp.ok) throw new Error(body.detail ?? `${resp.status} ${resp.statusText}`)
   return body
+}
+
+// Public demo: live AI and sending need a PIN (kept for this browser tab only).
+export type DemoInfo = { pin_required: boolean; live_left: number }
+export const getDemo = () => getJson<DemoInfo>('/api/demo')
+
+let pinInMemory: string | null = null // fallback when the browser blocks storage
+
+export function demoPin(): string | null {
+  try {
+    return sessionStorage.getItem('demoPin') ?? pinInMemory
+  } catch {
+    return pinInMemory
+  }
+}
+
+export async function unlockDemo(pin: string): Promise<boolean> {
+  const resp = await fetch('/api/demo/unlock', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ pin }),
+  })
+  const ok = resp.ok && (await resp.json()).ok === true
+  if (ok) {
+    pinInMemory = pin
+    try {
+      sessionStorage.setItem('demoPin', pin)
+    } catch {
+      /* storage blocked: the in-memory copy lasts until the page reloads */
+    }
+  }
+  return ok
 }

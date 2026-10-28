@@ -4,9 +4,12 @@ import {
   type Evidence,
   type FinalDraft,
   type Sentence,
+  demoPin,
+  getDemo,
   sendReply,
   statusOf,
   streamDraft,
+  unlockDemo,
 } from './api'
 
 type Step = { key: string; tone: 'run' | 'ok' | 'bad' | 'info'; text: string; detail?: string[] }
@@ -14,6 +17,8 @@ type Step = { key: string; tone: 'run' | 'ok' | 'bad' | 'info'; text: string; de
 /** Turns stream events into the timeline the seller watches. */
 function stepFor(e: DraftEvent): Step | null {
   switch (e.name) {
+    case 'mode':
+      return null // shown as the replay label, not as a step
     case 'writing':
       return { key: `w${e.data.round}`, tone: 'run', text: e.data.round === 1 ? 'Writer is drafting a reply from the evidence…' : 'Writer is rewriting…' }
     case 'draft':
@@ -56,9 +61,15 @@ export default function DraftPanel({ disputeId, evidence, canSend, cantSendReaso
   const [focused, setFocused] = useState<number | null>(null)
   const [confirming, setConfirming] = useState(false)
   const [sendState, setSendState] = useState<{ ok: boolean; text: string } | null>(null)
+  const [mode, setMode] = useState<{ live: boolean; why: 'locked' | 'limit' | null } | null>(null)
+  const [pinRequired, setPinRequired] = useState(false)
+  const [unlocked, setUnlocked] = useState(() => demoPin() !== null)
   const stop = useRef<(() => void) | null>(null)
 
   useEffect(() => () => stop.current?.(), [])
+  useEffect(() => {
+    getDemo().then((d) => setPinRequired(d.pin_required), () => setPinRequired(false))
+  }, [])
 
   const start = () => {
     stop.current?.()
@@ -68,8 +79,10 @@ export default function DraftPanel({ disputeId, evidence, canSend, cantSendReaso
     onFocus(null)
     setConfirming(false)
     setSendState(null)
+    setMode(null)
     setRunning(true)
     stop.current = streamDraft(disputeId, (e) => {
+      if (e.name === 'mode') setMode(e.data)
       const step = stepFor(e)
       // A finished "…ing" step is replaced by its result, so the timeline reads as done.
       if (step) setSteps((prev) => [...prev.map((s) => (s.tone === 'run' ? { ...s, tone: 'info' as const } : s)), step])
@@ -103,6 +116,16 @@ export default function DraftPanel({ disputeId, evidence, canSend, cantSendReaso
           {running ? 'Working…' : final ? 'Draft again' : 'Draft reply'}
         </button>
       </div>
+
+      {pinRequired && !unlocked && <DemoUnlock onUnlocked={() => setUnlocked(true)} />}
+
+      {mode && !mode.live && (
+        <p className="replay-label">
+          {mode.why === 'limit'
+            ? "Today's live AI limit is reached, so this is a replay of a real run."
+            : 'Replay of a real run. No AI was called and nothing can be sent.'}
+        </p>
+      )}
 
       {steps.length === 0 && (
         <p className="meta">
@@ -177,7 +200,9 @@ export default function DraftPanel({ disputeId, evidence, canSend, cantSendReaso
             {!confirming ? (
               <button
                 className="btn primary"
-                disabled={!canSend || final.sentences.length === 0 || sendState?.text.startsWith('Sent')}
+                disabled={
+                  !canSend || !mode?.live || final.sentences.length === 0 || sendState?.text.startsWith('Sent')
+                }
                 onClick={() => setConfirming(true)}
               >
                 Approve & send to PayPal
@@ -193,10 +218,61 @@ export default function DraftPanel({ disputeId, evidence, canSend, cantSendReaso
               </>
             )}
             {!canSend && cantSendReason && <span className="meta">{cantSendReason}</span>}
+            {canSend && mode && !mode.live && <span className="meta">Replays can't be sent.</span>}
             {sendState && <span className={sendState.ok ? 'send-ok' : 'send-bad'}>{sendState.text}</span>}
           </div>
         </>
       )}
     </section>
+  )
+}
+
+/** Quiet note for public visitors, with a small form for judges who have the demo PIN. */
+function DemoUnlock({ onUnlocked }: { onUnlocked: () => void }) {
+  const [open, setOpen] = useState(false)
+  const [pin, setPin] = useState('')
+  const [state, setState] = useState<'idle' | 'checking' | 'wrong'>('idle')
+
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setState('checking')
+    if (await unlockDemo(pin.trim())) onUnlocked()
+    else setState('wrong')
+  }
+
+  return (
+    <div className="demo-note">
+      <span>Demo mode: drafts are a replay of a real run.</span>
+      {!open ? (
+        <button className="link" onClick={() => setOpen(true)}>
+          Have a demo PIN? Unlock live AI
+        </button>
+      ) : (
+        <form className="pin-form" onSubmit={submit}>
+          <label htmlFor="demo-pin" className="sr-only">
+            Demo PIN
+          </label>
+          <input
+            id="demo-pin"
+            className="pin-input"
+            type="password"
+            inputMode="numeric"
+            autoComplete="off"
+            placeholder="Demo PIN"
+            value={pin}
+            onChange={(e) => setPin(e.target.value)}
+            autoFocus
+          />
+          <button className="btn" disabled={!pin.trim() || state === 'checking'}>
+            {state === 'checking' ? 'Checking…' : 'Unlock'}
+          </button>
+          {state === 'wrong' && (
+            <span className="send-bad" role="alert">
+              That PIN didn't work.
+            </span>
+          )}
+        </form>
+      )}
+    </div>
   )
 }

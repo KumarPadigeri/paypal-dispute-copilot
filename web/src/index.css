@@ -1090,3 +1090,55 @@ th[aria-sort] .th-sort {
 [data-tip]:focus-visible::after {
   opacity: 1;
 }
+
+
+/* Public demo: replay label and PIN unlock */
+.demo-note {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 12px;
+  font-size: 13px;
+  color: var(--muted);
+  background: var(--surface-2);
+  border-radius: 8px;
+  padding: 8px 12px;
+  margin-bottom: 12px;
+}
+
+.pin-form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.pin-input {
+  width: 130px;
+  font: inherit;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  padding: 6px 10px;
+}
+
+.pin-input:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.replay-label {
+  font-size: 13px;
+  color: var(--accent);
+  margin: 0 0 12px;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
