@@ -20,6 +20,7 @@
   --bad: #e39a9a;
   --bad-soft: rgba(227, 154, 154, 0.12);
   --lit: rgba(143, 176, 232, 0.14);
+  --link: #8ab4f8;
   color-scheme: dark;
   --radius: 10px;
 
@@ -52,6 +53,7 @@
     --bad: #b23838;
     --bad-soft: rgba(178, 56, 56, 0.08);
     --lit: rgba(45, 91, 168, 0.1);
+    --link: #0b57d0;
     color-scheme: light;
   }
 }
@@ -76,6 +78,7 @@
   --bad: #b23838;
   --bad-soft: rgba(178, 56, 56, 0.08);
   --lit: rgba(45, 91, 168, 0.1);
+  --link: #0b57d0;
   color-scheme: light;
 }
 
@@ -940,16 +943,20 @@ body.resizing {
   color: var(--muted);
 }
 
+/* Standard links: link blue and an underline (not color alone) */
 .link {
   background: none;
   border: none;
   padding: 0;
-  color: var(--accent);
+  color: var(--link);
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
   cursor: pointer;
 }
 
 .link:hover {
-  text-decoration: underline;
+  text-decoration-thickness: 2px;
 }
 
 .link:focus-visible {
