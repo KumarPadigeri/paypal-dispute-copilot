@@ -922,12 +922,18 @@ body.resizing {
   transition: background 0.15s;
 }
 
+/* Zebra stripes: a faint tint on every other row; hover and selection stay stronger */
+.table tbody tr:nth-child(even) {
+  background: color-mix(in srgb, var(--surface-2) 45%, transparent);
+}
+
 .table tbody tr:hover {
-  background: color-mix(in srgb, var(--surface-2) 50%, transparent);
+  background: color-mix(in srgb, var(--accent) 9%, transparent);
 }
 
 .table tbody tr.selected {
   background: var(--surface-2);
+  box-shadow: inset 3px 0 0 var(--accent);
 }
 
 .table .num {
