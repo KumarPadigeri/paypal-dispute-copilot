@@ -247,7 +247,7 @@ export default function DisputeList({ openId, roomy, onOpen }: Props) {
   }, [])
 
   if (error) return <div className="notice error">Could not load disputes from PayPal ({error}).</div>
-  if (!disputes) return <ListSkeleton />
+  if (!disputes) return <ListSkeleton asTable={asTable} />
 
   // PayPal's full reason list (in PayPal's order), plus any reason a case has that the list lacks.
   const reasons = [...new Set([...allReasons, ...disputes.map((d) => d.reason)])]

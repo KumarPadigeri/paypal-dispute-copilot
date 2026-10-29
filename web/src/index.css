@@ -1420,3 +1420,8 @@ th[aria-sort] .th-sort {
 .rows-label {
   white-space: nowrap;
 }
+
+/* Skeleton cells keep the real column alignment (amount on the right) */
+.table td.num .sk {
+  margin-left: auto;
+}
