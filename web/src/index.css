@@ -523,9 +523,9 @@ body.resizing {
 .chip.tone-info { color: var(--accent); background: var(--accent-soft); border-color: transparent; }
 .chip.tone-ok { color: var(--ok); background: var(--ok-soft); border-color: transparent; }
 .chip.tone-warn:hover, .chip.tone-info:hover, .chip.tone-ok:hover { filter: brightness(1.08); }
-.chip.tone-warn.on { border-color: var(--warn); background: var(--warn-soft); color: var(--warn); }
-.chip.tone-info.on { border-color: var(--accent); background: var(--accent-soft); color: var(--accent); }
-.chip.tone-ok.on { border-color: var(--ok); background: var(--ok-soft); color: var(--ok); }
+.chip.tone-warn.on { border-color: var(--warn); background: var(--warn); color: var(--bg); }
+.chip.tone-info.on { border-color: var(--accent); background: var(--accent); color: var(--bg); }
+.chip.tone-ok.on { border-color: var(--ok); background: var(--ok); color: var(--bg); }
 /* Solid count bubbles in the chip's color: easy to read at a glance */
 .chip.tone-warn .count { background: var(--warn); color: var(--bg); }
 .chip.tone-info .count { background: var(--accent); color: var(--bg); }
@@ -1382,7 +1382,8 @@ th[aria-sort] .th-sort {
 }
 
 
-.chip.on .count {
+/* The neutral chip's bubble when selected (status chips have their own, below) */
+.chip.tone-all.on .count {
   background: var(--surface);
   color: var(--text);
 }
@@ -1432,3 +1433,9 @@ th[aria-sort] .th-sort {
 .table td.num .sk {
   margin-left: auto;
 }
+
+/* Selected status chip: filled with its color, bubble inverted, so the choice is obvious */
+.chip.tone-warn.on .count { background: var(--bg); color: var(--warn); }
+.chip.tone-info.on .count { background: var(--bg); color: var(--accent); }
+.chip.tone-ok.on .count { background: var(--bg); color: var(--ok); }
+.chip[class*='tone-'].on svg { color: currentColor; }
