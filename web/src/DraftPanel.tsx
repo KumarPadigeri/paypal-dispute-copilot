@@ -7,10 +7,10 @@ import {
   demoPin,
   getDemo,
   sendReply,
-  statusOf,
   streamDraft,
   unlockDemo,
 } from './api'
+import { statusOf } from './status'
 
 type Step = { key: string; tone: 'run' | 'ok' | 'bad' | 'info'; text: string; detail?: string[] }
 
@@ -110,7 +110,7 @@ export default function DraftPanel({
     setSendState({ ok: true, text: 'Sending to PayPal…' })
     try {
       const r = await sendReply(disputeId)
-      setSendState({ ok: true, text: `Sent. PayPal status: ${statusOf(r.status).label}` })
+      setSendState({ ok: true, text: `Sent. ${statusOf(r.status).detail}.` })
       onSent()
     } catch (err) {
       setSendState({ ok: false, text: `Not sent: ${(err as Error).message}` })

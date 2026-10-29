@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import DraftPanel from './DraftPanel'
+import { CaseSkeleton } from './Skeleton'
 import { AlertIcon, CloseIcon, CopyIcon } from './icons'
 import {
   type CaseDetail,
@@ -8,8 +9,9 @@ import {
   formatAmount,
   getCase,
   resolveCase,
-  statusOf,
 } from './api'
+import StatusPill from './StatusPill'
+import { statusOf } from './status'
 
 export default function CaseView({ id, onClose }: { id: string; onClose: () => void }) {
   const [c, setCase] = useState<CaseDetail | null>(null)
@@ -42,7 +44,13 @@ export default function CaseView({ id, onClose }: { id: string; onClose: () => v
     </div>
   )
   if (error) return <>{bar}<div className="notice error">Could not load this case ({error}).</div></>
-  if (!c) return <>{bar}<div className="notice">Gathering evidence from PayPal…</div></>
+  if (!c)
+    return (
+      <>
+        {bar}
+        <CaseSkeleton />
+      </>
+    )
 
   const status = statusOf(c.status)
   const requested = c.requested_from_seller.map((r) => REQUESTED[r] ?? r)
@@ -51,7 +59,7 @@ export default function CaseView({ id, onClose }: { id: string; onClose: () => v
   const canSend = c.status === 'WAITING_FOR_SELLER_RESPONSE' && c.actions.includes('provide_evidence')
   const cantSendReason = canSend
     ? null
-    : `PayPal isn't waiting for your reply on this case (${status.label.toLowerCase()}).`
+    : `PayPal isn't waiting for your reply on this case (${status.detail.toLowerCase()}).`
 
   return (
     <>
@@ -61,11 +69,14 @@ export default function CaseView({ id, onClose }: { id: string; onClose: () => v
           <h2 ref={heading} tabIndex={-1}>
             {c.reason}
           </h2>
-          {c.respond_by && <p className="meta">Reply by {c.respond_by.replace(' (UTC)', '')}</p>}
+          <p className="meta">
+            {status.detail}
+            {c.respond_by && status.group === 'reply' && <> · reply by {c.respond_by.replace(' (UTC)', '')}</>}
+          </p>
         </div>
         <div className="case-head-right">
           <span className="case-amount">{formatAmount(c.amount)}</span>
-          <span className={`pill ${status.tone}`}>{status.label}</span>
+          <StatusPill status={c.status} />
         </div>
         {requested.length > 0 && (
           <p className="asks">
@@ -164,7 +175,7 @@ function AdviceBox({ disputeId, advice, amount, onDone }: AdviceProps) {
     try {
       const r = await resolveCase(disputeId, choice.key)
       setPicked(null)
-      setState({ ok: true, text: `Done. PayPal status: ${statusOf(r.status).label}` })
+      setState({ ok: true, text: `Done. ${statusOf(r.status).detail}.` })
       onDone()
     } catch (err) {
       const msg = (err as Error).message

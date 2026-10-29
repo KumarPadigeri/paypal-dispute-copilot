@@ -94,6 +94,11 @@ def create_app(
     def health() -> dict:
         return {"ok": True}
 
+    @app.get("/api/reasons")
+    def reasons() -> list[str]:
+        """PayPal's dispute reasons in plain words, in PayPal's order."""
+        return list(REASONS.values())
+
     @app.get("/api/disputes")
     def list_disputes(request: Request) -> list[dict]:
         return [

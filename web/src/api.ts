@@ -20,15 +20,8 @@ async function getJson<T>(path: string): Promise<T> {
 
 export const listDisputes = () => getJson<DisputeSummary[]>('/api/disputes')
 
-// PayPal's status codes in words a seller understands, plus a calm color.
-export const STATUS: Record<string, { label: string; tone: 'warn' | 'info' | 'ok' | 'muted' }> = {
-  WAITING_FOR_SELLER_RESPONSE: { label: 'Needs your reply', tone: 'warn' },
-  UNDER_REVIEW: { label: 'PayPal reviewing', tone: 'info' },
-  WAITING_FOR_BUYER_RESPONSE: { label: 'Waiting for buyer', tone: 'muted' },
-  RESOLVED: { label: 'Resolved', tone: 'ok' },
-}
-
-export const statusOf = (s: string) => STATUS[s] ?? { label: s, tone: 'muted' as const }
+/** PayPal's dispute reasons, in plain words and PayPal's order. */
+export const listReasons = () => getJson<string[]>('/api/reasons')
 
 export const formatMoney = (m: Money | null) =>
   m ? new Intl.NumberFormat('en-US', { style: 'currency', currency: m.currency_code }).format(Number(m.value)) : ''
@@ -42,6 +35,20 @@ export function formatAgo(iso: string | null): string {
   if (minutes < 60 * 24) return `${Math.round(minutes / 60)} h ago`
   if (minutes < 60 * 24 * 7) return `${Math.round(minutes / 1440)} days ago`
   return formatDate(iso)
+}
+
+/** "Oct 28, 3:04 PM" (the year is added when it is not this year), in the viewer's time zone. */
+export function formatDateTime(iso: string | null): string {
+  if (!iso) return ''
+  const d = new Date(iso)
+  const sameYear = d.getFullYear() === new Date().getFullYear()
+  return d.toLocaleString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    ...(sameYear ? {} : { year: 'numeric' }),
+    hour: 'numeric',
+    minute: '2-digit',
+  })
 }
 
 export const formatDate = (iso: string | null) =>

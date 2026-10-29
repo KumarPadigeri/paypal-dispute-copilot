@@ -2,7 +2,7 @@ import { useRef } from 'react'
 
 export const LIST_MIN = 300
 const CASE_MIN = 520 // the case panel always keeps room for its two columns
-export const LIST_DEFAULT = 392
+export const LIST_DEFAULT = 432
 const STEP = 24 // arrow-key step
 
 type Props = {

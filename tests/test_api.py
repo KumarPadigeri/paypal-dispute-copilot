@@ -244,3 +244,10 @@ def test_health_and_built_web_page_are_served(tmp_path):
     assert c.get("/api/health").json() == {"ok": True}
     assert "Dispute Copilot" in c.get("/").text
     assert c.get("/api/disputes").status_code == 200  # API routes still win over the page
+
+
+def test_reasons_are_paypals_full_list_in_order():
+    reasons = client.get("/api/reasons").json()
+    assert len(reasons) == 10
+    assert reasons[:2] == ["Item not received", "Item not as described"]
+    assert "Problem with remittance" in reasons and reasons[-1] == "Other"

@@ -8,15 +8,17 @@ answers, never proof.
 from dataclasses import dataclass, field
 from datetime import datetime
 
+# PayPal's dispute reasons (the `dispute_reason` list in the Disputes API spec), in its order.
 REASONS = {
     "MERCHANDISE_OR_SERVICE_NOT_RECEIVED": "Item not received",
     "MERCHANDISE_OR_SERVICE_NOT_AS_DESCRIBED": "Item not as described",
     "UNAUTHORISED": "Unauthorized payment",
+    "CREDIT_NOT_PROCESSED": "Refund not processed",
     "DUPLICATE_TRANSACTION": "Duplicate payment",
     "INCORRECT_AMOUNT": "Incorrect amount",
-    "CREDIT_NOT_PROCESSED": "Refund not processed",
-    "CANCELED_RECURRING_BILLING": "Canceled subscription still billed",
     "PAYMENT_BY_OTHER_MEANS": "Paid by other means",
+    "CANCELED_RECURRING_BILLING": "Canceled subscription still billed",
+    "PROBLEM_WITH_REMITTANCE": "Problem with remittance",
     "OTHER": "Other",
 }
 
