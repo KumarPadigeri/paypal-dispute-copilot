@@ -18,6 +18,9 @@ def test_case_summary():
     assert case.respond_by == "Nov 16, 2026 (UTC)"
     assert case.respond_by_iso == "2026-11-16T00:29:15.329Z"
     assert case.requested_from_seller == ["PROOF_OF_FULFILLMENT"]
+    assert (case.stage, case.channel) == ("INQUIRY", "INTERNAL")
+    assert case.opened_iso == "2026-10-27T00:29:15.329Z"
+    assert case.updated_iso == "2026-10-27T00:32:43.893Z"
 
 
 def test_evidence_is_numbered_facts_from_paypal():

@@ -65,6 +65,10 @@ export type CaseDetail = {
   status: string
   respond_by: string | null // "Nov 16, 2026 (UTC)"
   respond_by_iso: string | null // the same date, machine-readable
+  stage: string | null // PayPal's lifecycle stage: INQUIRY, CHARGEBACK, PRE_ARBITRATION, ARBITRATION
+  channel: string | null // INTERNAL (opened with PayPal) or EXTERNAL (card issuer)
+  opened_iso: string | null
+  updated_iso: string | null
   requested_from_seller: string[]
   evidence: Evidence[]
   claims: Claim[]

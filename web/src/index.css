@@ -210,6 +210,114 @@ button {
   font-weight: 600;
 }
 
+/* Stage timeline: Inquiry -> Claim -> Closed, with a plain note on what "now" means */
+.stage-timeline {
+  grid-column: 1 / -1;
+  margin-top: 12px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+}
+
+.stages {
+  display: flex;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.stage {
+  position: relative;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  text-align: center;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+/* The line joining this step to the one before it */
+.stage + .stage::before {
+  content: '';
+  position: absolute;
+  top: 10px;
+  right: calc(50% + 16px);
+  left: calc(-50% + 16px);
+  height: 2px;
+  border-radius: 1px;
+  background: var(--border);
+}
+
+/* Blue line into every step the case reached; a skipped step and the line after it stay grey */
+.stage.done::before,
+.stage.now::before {
+  background: var(--accent);
+}
+
+.stage.skipped::before,
+.stage.skipped + .stage::before {
+  background: var(--border);
+}
+
+.stage.skipped .stage-dot {
+  border-style: dashed;
+}
+
+.stage.skipped .stage-label {
+  color: var(--faint);
+}
+
+.stage-dot {
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 2px solid var(--border-strong);
+  background: var(--surface);
+  color: var(--on-accent);
+}
+
+.stage.done .stage-dot {
+  border-color: var(--accent);
+  background: var(--accent);
+}
+
+.stage.now .stage-dot {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 4px var(--accent-soft);
+}
+
+.stage.now .stage-dot::after {
+  content: '';
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+
+.stage.done .stage-label,
+.stage.now .stage-label {
+  color: var(--text);
+}
+
+.stage.now .stage-label {
+  font-weight: 600;
+}
+
+.stage-date {
+  font-size: 12px;
+  color: var(--faint);
+}
+
+.stage-note {
+  margin: 12px 0 0;
+  font-size: 13px;
+  color: var(--muted);
+  text-align: center;
+}
+
 .columns {
   display: grid;
   grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr);

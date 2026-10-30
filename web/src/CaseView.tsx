@@ -12,6 +12,7 @@ import {
   resolveCase,
 } from './api'
 import StatusPill from './StatusPill'
+import Timeline from './Timeline'
 import { statusOf } from './status'
 
 export default function CaseView({ id, onClose }: { id: string; onClose: () => void }) {
@@ -85,11 +86,11 @@ export default function CaseView({ id, onClose }: { id: string; onClose: () => v
             <p className="meta">
               {status.detail}
               {status.group === 'reply' && c.respond_by_iso && (
-              <>
-                {' · '}
-                <Deadline iso={c.respond_by_iso} />
-              </>
-            )}
+                <>
+                  {' · '}
+                  <Deadline iso={c.respond_by_iso} />
+                </>
+              )}
             </p>
           </div>
           <div className="case-head-right">
@@ -101,6 +102,7 @@ export default function CaseView({ id, onClose }: { id: string; onClose: () => v
               PayPal asks you for: <strong>{requested.join(', ')}</strong>
             </p>
           )}
+          <Timeline c={c} />
         </section>
 
         {c.advice && <AdviceBox disputeId={c.dispute_id} advice={c.advice} amount={c.amount} onDone={load} />}

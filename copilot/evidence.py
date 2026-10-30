@@ -50,6 +50,11 @@ class DisputeCase:
     actions: list[str] = field(default_factory=list)
     shipments: list[dict] = field(default_factory=list)  # {"carrier", "tracking_number"}
     respond_by_iso: str | None = None  # PayPal's reply-by date, machine-readable
+    # for the stage timeline: INQUIRY, CHARGEBACK, ...; INTERNAL (PayPal) or EXTERNAL (card issuer)
+    stage: str | None = None
+    channel: str | None = None
+    opened_iso: str | None = None
+    updated_iso: str | None = None
 
 
 def money(m: dict) -> str:
@@ -165,6 +170,10 @@ def build_case(d: dict, trackers: list[dict] | None = None) -> DisputeCase:
         status=d["status"],
         respond_by=day(due) if due else None,
         respond_by_iso=due,
+        stage=d.get("dispute_life_cycle_stage"),
+        channel=d.get("dispute_channel"),
+        opened_iso=d.get("create_time"),
+        updated_iso=d.get("update_time"),
         buyer_claims=claims,
         requested_from_seller=requested,
         evidence=evidence_from_dispute(d, trackers),

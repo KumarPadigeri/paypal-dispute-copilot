@@ -152,3 +152,34 @@ def test_reply_by_countdown_gets_louder_near_the_deadline(browser, base_url, now
     expect(cell).to_have_text(text)
     expect(cell).to_have_class(f"due {tone}")
     context.close()
+
+
+def stage_states(pg: Page) -> list[tuple[str, str]]:
+    return [
+        (li.locator(".stage-label").text_content().strip(), li.get_attribute("class").split()[1])
+        for li in pg.locator(".stage").all()
+    ]
+
+
+def test_timeline_shows_the_current_stage_and_what_it_means(page: Page):
+    page.goto("/#/case/PP-R-FOD-10194708")
+    expect(page.locator(".stage")).to_have_count(3)
+    assert stage_states(page) == [("Inquiry", "now"), ("Claim", "next"), ("Closed", "next")]
+    expect(page.locator(".stage.now")).to_have_attribute("aria-current", "step")
+    expect(page.locator(".stage-note")).to_contain_text("the buyer can escalate it to a claim")
+
+
+def test_timeline_marks_a_claim_skipped_when_the_case_closed_at_inquiry(page: Page):
+    def closed(route):
+        r = route.fetch()
+        route.fulfill(response=r, json={**r.json(), "status": "RESOLVED"})
+
+    page.route("**/api/disputes/PP-R-FOD-10194708", closed)
+    page.goto("/#/case/PP-R-FOD-10194708")
+    expect(page.locator(".stage")).to_have_count(3)
+    assert stage_states(page) == [
+        ("Inquiry", "done"),
+        ("Claim (skipped)", "skipped"),
+        ("Closed", "done"),
+    ]
+    expect(page.locator(".stage-note")).to_have_count(0)
