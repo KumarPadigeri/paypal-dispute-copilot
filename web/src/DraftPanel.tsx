@@ -94,7 +94,7 @@ export default function DraftPanel({
       if (e.name === 'mode') setMode(e.data)
       const step = stepFor(e)
       // A finished "…ing" step is replaced by its result, so the timeline reads as done.
-      if (step) setSteps((prev) => [...prev.map((s) => (s.tone === 'run' ? { ...s, tone: 'info' as const } : s)), step])
+      if (step) setSteps((prev) => [...prev.filter((s) => s.tone !== 'run'), step])
       if (e.name === 'final') setFinal(e.data)
       if (e.name === 'final' || e.name === 'error') setRunning(false)
     })
@@ -121,7 +121,8 @@ export default function DraftPanel({
     <section className="panel draft">
       <div className="draft-head">
         <h3 className="section-title">Your reply</h3>
-        <button className="btn" onClick={start} disabled={running || draftBlocked}>
+        {/* Blue while drafting is the next step; once a draft exists, sending is. */}
+        <button className={final || draftBlocked ? 'btn' : 'btn primary'} onClick={start} disabled={running || draftBlocked}>
           {running ? 'Working…' : final ? 'Draft again' : 'Draft reply'}
         </button>
       </div>

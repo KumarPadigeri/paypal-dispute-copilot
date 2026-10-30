@@ -66,7 +66,9 @@ export default function CaseView({ id, onClose }: { id: string; onClose: () => v
     )
 
   const status = statusOf(c.status)
-  const requested = c.requested_from_seller.map((r) => REQUESTED[r] ?? r)
+  // What PayPal asks for only matters while it waits for the seller.
+  const requested = status.group === 'reply' ? c.requested_from_seller.map((r) => REQUESTED[r] ?? r) : []
+  const due = status.group === 'reply' && c.respond_by_iso
   const cites = new Set(focus?.cites ?? [])
   const answers = new Set(focus?.answers ?? [])
   const canSend = c.status === 'WAITING_FOR_SELLER_RESPONSE' && c.actions.includes('provide_evidence')
@@ -79,27 +81,23 @@ export default function CaseView({ id, onClose }: { id: string; onClose: () => v
       {bar}
       <div className="case-body">
         <section className="case-head">
-          <div>
-            <h2 ref={heading} tabIndex={-1}>
-              {c.reason}
-            </h2>
-            <p className="meta">
-              {status.detail}
-              {status.group === 'reply' && c.respond_by_iso && (
-                <>
-                  {' · '}
-                  <Deadline iso={c.respond_by_iso} />
-                </>
-              )}
-            </p>
-          </div>
+          <h2 ref={heading} tabIndex={-1}>
+            {c.reason}
+          </h2>
           <div className="case-head-right">
             <span className="case-amount">{formatAmount(c.amount)}</span>
             <StatusPill status={c.status} tipAlign="end" />
           </div>
-          {requested.length > 0 && (
-            <p className="asks">
-              PayPal asks you for: <strong>{requested.join(', ')}</strong>
+          {/* The pill already says the status; this line adds only what it can't: the deadline
+              (or who the case is waiting on) and what PayPal asks for. */}
+          {(due || status.group === 'waiting' || requested.length > 0) && (
+            <p className="meta">
+              {due ? <Deadline iso={c.respond_by_iso} /> : status.group === 'waiting' && <span>{status.detail}</span>}
+              {requested.length > 0 && (
+                <span className="asks">
+                  PayPal asks for: <strong>{requested.join(', ')}</strong>
+                </span>
+              )}
             </p>
           )}
           <Timeline c={c} />
@@ -212,8 +210,9 @@ function AdviceBox({ disputeId, advice, amount, onDone }: AdviceProps) {
         <p>{advice.text}</p>
         {advice.resolutions.length > 0 && !choice && (
           <div className="advice-actions">
-            {advice.resolutions.map((r) => (
-              <button key={r.key} className="btn" onClick={() => setPicked(r.key)}>
+            {/* Best first: the recommended option is the blue one. It only opens the confirm step. */}
+            {advice.resolutions.map((r, i) => (
+              <button key={r.key} className={i === 0 ? 'btn primary' : 'btn'} onClick={() => setPicked(r.key)}>
                 {r.label}
               </button>
             ))}

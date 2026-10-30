@@ -158,36 +158,49 @@ button {
   border-color: var(--bad);
 }
 
-/* Case view */
+/* Case view: a two-line header. Line 1: reason | amount + status. Line 2: deadline and what
+   PayPal asks for | a compact stage stepper. */
 .case-head {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
-  gap: 4px 16px;
+  align-items: center;
+  gap: 6px 24px;
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  padding: 18px 20px;
+  padding: 16px 20px;
   margin-bottom: 16px;
 }
 
 .case-head h2 {
   font-size: 20px;
   font-weight: 600;
-  margin: 0 0 2px;
+  margin: 0;
   letter-spacing: -0.01em;
 }
 
 .case-head .meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 0;
   color: var(--muted);
   font-size: 13px;
   margin: 0;
 }
 
+/* " · " between the facts on line 2 */
+.case-head .meta > * + *::before {
+  content: '·';
+  margin: 0 8px;
+  color: var(--faint);
+}
+
 .case-head-right {
   display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 6px;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
 }
 
 .case-amount {
@@ -196,55 +209,37 @@ button {
   font-variant-numeric: tabular-nums;
 }
 
-.asks {
-  grid-column: 1 / -1;
-  margin: 10px 0 0;
-  padding-top: 12px;
-  border-top: 1px solid var(--border);
-  color: var(--muted);
-  font-size: 14px;
-}
-
 .asks strong {
   color: var(--text);
   font-weight: 600;
 }
 
-/* Stage timeline: Inquiry -> Claim -> Closed; each label explains itself on hover */
-.stage-timeline {
-  grid-column: 1 / -1;
-  margin-top: 12px;
-  padding-top: 14px;
-  border-top: 1px solid var(--border);
-}
-
+/* Stage stepper, inline: (o) Inquiry -- ( ) Claim -- ( ) Closed; each label explains itself on hover */
 .stages {
+  grid-column: 2; /* stays on the right even when line 2 has no text */
   display: flex;
+  align-items: center;
+  justify-content: flex-end;
   list-style: none;
   margin: 0;
   padding: 0;
+  font-size: 13px;
 }
 
 .stage {
-  position: relative;
-  flex: 1;
   display: flex;
-  flex-direction: column;
   align-items: center;
-  gap: 4px;
-  text-align: center;
-  font-size: 13px;
+  gap: 6px;
   color: var(--muted);
+  white-space: nowrap;
 }
 
 /* The line joining this step to the one before it */
 .stage + .stage::before {
   content: '';
-  position: absolute;
-  top: 10px;
-  right: calc(50% + 16px);
-  left: calc(-50% + 16px);
+  width: 28px;
   height: 2px;
+  margin: 0 8px;
   border-radius: 1px;
   background: var(--border);
 }
@@ -260,23 +255,21 @@ button {
   background: var(--border);
 }
 
-.stage.skipped .stage-dot {
-  border-style: dashed;
-}
-
-.stage.skipped .stage-label {
-  color: var(--faint);
-}
-
 .stage-dot {
   display: grid;
   place-items: center;
-  width: 22px;
-  height: 22px;
+  flex: none;
+  width: 16px;
+  height: 16px;
   border-radius: 50%;
   border: 2px solid var(--border-strong);
   background: var(--surface);
   color: var(--on-accent);
+}
+
+.stage-dot svg {
+  width: 10px;
+  height: 10px;
 }
 
 .stage.done .stage-dot {
@@ -286,15 +279,19 @@ button {
 
 .stage.now .stage-dot {
   border-color: var(--accent);
-  box-shadow: 0 0 0 4px var(--accent-soft);
+  box-shadow: 0 0 0 3px var(--accent-soft);
 }
 
 .stage.now .stage-dot::after {
   content: '';
-  width: 8px;
-  height: 8px;
+  width: 6px;
+  height: 6px;
   border-radius: 50%;
   background: var(--accent);
+}
+
+.stage.skipped .stage-dot {
+  border-style: dashed;
 }
 
 .stage.done .stage-label,
@@ -306,8 +303,19 @@ button {
   font-weight: 600;
 }
 
+.stage.skipped .stage-label {
+  color: var(--faint);
+}
+
+/* Label with its date underneath */
+.stage-text {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.25;
+}
+
 .stage-date {
-  font-size: 12px;
+  font-size: 11px;
   color: var(--faint);
 }
 
@@ -406,16 +414,36 @@ button {
   white-space: nowrap;
 }
 
+/* Phone: everything stacks; amount and status share a row, the stepper gets its own */
 @media (max-width: 600px) {
   .case-head {
     grid-template-columns: minmax(0, 1fr);
   }
 
   .case-head-right {
-    flex-direction: row;
-    align-items: center;
     justify-content: space-between;
-    margin-top: 8px;
+    margin-top: 4px;
+  }
+
+  .stages {
+    grid-column: auto;
+    justify-content: flex-start;
+    margin-top: 6px;
+  }
+
+  .stage + .stage::before {
+    width: 14px;
+    margin: 0 6px;
+  }
+
+  /* One fact per line; no leading "·" when they stack */
+  .case-head .meta {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .case-head .meta > * + *::before {
+    content: none;
   }
 }
 

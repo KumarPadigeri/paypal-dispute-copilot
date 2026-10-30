@@ -1,4 +1,4 @@
-import { type CaseDetail, formatDate } from './api'
+import type { CaseDetail } from './api'
 import { TickIcon } from './icons'
 import { statusOf } from './status'
 
@@ -13,6 +13,9 @@ const MEANS: Record<string, string> = {
   CLOSED: 'The case is over',
 }
 
+// "Oct 28", like the reply-by date
+const shortDate = (iso: string) => new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+
 type Step = { key: string; label: string; date?: string }
 
 /** PayPal's dispute stages as a stepper: done steps get a check, the current one is highlighted. */
@@ -26,9 +29,10 @@ export default function Timeline({ c }: { c: CaseDetail }) {
     { key: second, label: external ? 'Chargeback' : 'Claim' },
     // Only shown when a case actually gets there.
     ...(ARBITRATION.includes(c.stage ?? '') ? [{ key: 'ARBITRATION', label: 'Arbitration' }] : []),
-    { key: 'CLOSED', label: 'Closed', date: closed ? formatDate(c.updated_iso) : undefined },
+    { key: 'CLOSED', label: 'Closed', date: closed && c.updated_iso ? shortDate(c.updated_iso) : undefined },
   ]
-  steps[0].date = formatDate(c.opened_iso)
+  // The first stage starts when the case was opened.
+  if (c.opened_iso) steps[0].date = shortDate(c.opened_iso)
 
   const stageKey = ARBITRATION.includes(c.stage ?? '') ? 'ARBITRATION' : c.stage === 'CHARGEBACK' ? second : c.stage
   const reached = Math.max(0, steps.findIndex((s) => s.key === stageKey))
@@ -43,24 +47,24 @@ export default function Timeline({ c }: { c: CaseDetail }) {
   }
 
   return (
-    <div className="stage-timeline">
-      <ol className="stages" aria-label="Dispute stages">
-        {steps.map((s, i) => {
-          const state = stateOf(i)
-          return (
-            <li key={s.key} className={`stage ${state}`} aria-current={i === current ? 'step' : undefined}>
-              <span className="stage-dot" aria-hidden="true">
-                {state === 'done' && <TickIcon />}
-              </span>
+    <ol className="stages" aria-label="Dispute stages">
+      {steps.map((s, i) => {
+        const state = stateOf(i)
+        return (
+          <li key={s.key} className={`stage ${state}`} aria-current={i === current ? 'step' : undefined}>
+            <span className="stage-dot" aria-hidden="true">
+              {state === 'done' && <TickIcon />}
+            </span>
+            <span className="stage-text">
               <span className="stage-label" data-tip={MEANS[s.key]}>
                 {s.label}
                 {state === 'skipped' && <span className="sr-only"> (skipped)</span>}
               </span>
               {s.date && <span className="stage-date">{s.date}</span>}
-            </li>
-          )
-        })}
-      </ol>
-    </div>
+            </span>
+          </li>
+        )
+      })}
+    </ol>
   )
 }

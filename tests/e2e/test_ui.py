@@ -68,8 +68,14 @@ def test_list_shows_disputes_and_opens_a_case_from_its_id(page: Page):
 
 def test_without_pin_draft_is_a_replay_and_cannot_be_sent(page: Page):
     page.goto("/#/case/PP-R-FOD-10194708")
+    expect(page.get_by_role("button", name="Draft reply")).to_have_class("btn primary")
     page.get_by_role("button", name="Draft reply").click()
     expect(page.get_by_text("Verified reply ready for your review")).to_be_visible(timeout=15000)
+    expect(page.get_by_role("button", name="Draft again")).to_have_class("btn")
+    # Each finished "…ing" step was replaced by its result: no line says something is still running.
+    expect(page.locator(".timeline .step")).not_to_have_count(0)
+    for text in page.locator(".timeline .step").all_inner_texts():
+        assert "…" not in text and " is " not in text, text
     expect(page.locator(".replay-label")).to_contain_text("Replay of a real run")
     expect(page.get_by_role("button", name="Approve & send to PayPal")).to_be_disabled()
     status = page.evaluate(
@@ -90,6 +96,8 @@ def test_case_without_tracking_gets_advice_not_a_draft(page: Page):
     page.goto("/#/case/PP-R-TEST-00000002")
     expect(page.locator(".advice h3")).to_have_text("No proof of shipping on file")
     expect(page.get_by_role("button", name="Draft reply")).to_be_disabled()
+    # The recommended (first) resolution is the blue button.
+    expect(page.get_by_role("button", name="Refund the buyer now")).to_have_class("btn primary")
     page.get_by_role("button", name="Refund the buyer now").click()
     expect(page.locator(".advice-confirm blockquote")).to_contain_text("refund the full amount")
     page.get_by_role("button", name="Cancel").click()  # never confirmed: nothing is sent
@@ -166,6 +174,10 @@ def test_timeline_shows_the_current_stage_and_explains_each_on_hover(page: Page)
     page.goto("/#/case/PP-R-FOD-10194708")
     expect(page.locator(".stage")).to_have_count(3)
     assert stage_states(page) == [("Inquiry", "now"), ("Claim", "next"), ("Closed", "next")]
+    # Dates sit under the stages the case reached: only the opening so far.
+    expect(page.locator(".stage-date")).to_have_count(1)
+    # The header line gives the deadline, not the status the pill already shows.
+    expect(page.locator(".case-head .meta")).not_to_contain_text("waiting for your reply")
     expect(page.locator(".stage.now")).to_have_attribute("aria-current", "step")
     expect(page.locator(".stage-label").nth(1)).to_have_attribute(
         "data-tip", "PayPal reviews both sides and decides"
@@ -185,6 +197,8 @@ def test_timeline_marks_a_claim_skipped_when_the_case_closed_at_inquiry(page: Pa
         ("Claim (skipped)", "skipped"),
         ("Closed", "done"),
     ]
+    # The pill says "Resolved"; the header doesn't repeat it in words.
+    expect(page.locator(".case-head .meta")).to_have_count(0)
 
 
 @pytest.mark.parametrize(
