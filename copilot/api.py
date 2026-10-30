@@ -110,6 +110,8 @@ def create_app(
                 "created": d.get("create_time"),
                 "updated": d.get("update_time"),
                 "stage": STAGES.get(d.get("dispute_life_cycle_stage", ""), None),
+                # PayPal's reply-by date; missing it means PayPal decides for the buyer
+                "respond_by": d.get("seller_response_due_date"),
             }
             for d in pp(request).list_disputes()
         ]

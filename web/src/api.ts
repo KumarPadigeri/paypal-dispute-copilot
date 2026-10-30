@@ -10,6 +10,7 @@ export type DisputeSummary = {
   created: string | null
   updated: string | null
   stage: string | null // Inquiry, Chargeback, ...
+  respond_by: string | null // PayPal's reply-by date (only while it waits for the seller)
 }
 
 async function getJson<T>(path: string): Promise<T> {
@@ -62,7 +63,8 @@ export type CaseDetail = {
   reason: string
   amount: string // e.g. "49.99 USD"
   status: string
-  respond_by: string | null
+  respond_by: string | null // "Nov 16, 2026 (UTC)"
+  respond_by_iso: string | null // the same date, machine-readable
   requested_from_seller: string[]
   evidence: Evidence[]
   claims: Claim[]

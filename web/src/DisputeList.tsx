@@ -9,6 +9,7 @@ import {
   listDisputes,
   listReasons,
 } from './api'
+import Deadline from './Deadline'
 import { ListSkeleton } from './Skeleton'
 import StatusPill from './StatusPill'
 import { GROUPS, type Group, statusOf } from './status'
@@ -50,12 +51,13 @@ const EMPTY: Record<'all' | Group, string> = {
   resolved: 'No resolved disputes yet.',
 }
 
-type SortKey = 'amount' | 'created' | 'updated'
+type SortKey = 'amount' | 'created' | 'updated' | 'due'
 type Sort = { key: SortKey; desc: boolean } | null
 const SORT_VALUE: Record<SortKey, (d: DisputeSummary) => number> = {
   amount: (d) => Number(d.amount?.value ?? 0),
   created: (d) => (d.created ? Date.parse(d.created) : 0),
   updated: (d) => (d.updated ? Date.parse(d.updated) : 0),
+  due: (d) => (d.respond_by ? Date.parse(d.respond_by) : Number.MAX_SAFE_INTEGER),
 }
 
 type View = 'list' | 'grid'
@@ -107,6 +109,11 @@ function DisputeCards({ items, openId, onOpen }: ItemsProps) {
           <span className="amount">{formatMoney(d.amount)}</span>
           <span className="meta date">{formatDate(d.created)}</span>
           <span className="meta id mono">{d.id}</span>
+          {statusOf(d.status).group === 'reply' && d.respond_by && (
+            <span className="card-due">
+              <Deadline iso={d.respond_by} />
+            </span>
+          )}
           <span className="pills">
             <span className="pill category">{d.reason}</span>
             <StatusPill status={d.status} />
@@ -120,10 +127,10 @@ function DisputeCards({ items, openId, onOpen }: ItemsProps) {
 type TableProps = ItemsProps & { sort: Sort; onSort: (key: SortKey) => void }
 
 function DisputeTable({ items, openId, onOpen, sort, onSort }: TableProps) {
-  const header = (key: SortKey, label: string, num = false) => (
+  const header = (key: SortKey, label: string, className?: string) => (
     <th
       scope="col"
-      className={num ? 'num' : undefined}
+      className={className}
       aria-sort={sort?.key === key ? (sort.desc ? 'descending' : 'ascending') : undefined}
     >
       <button className="th-sort" onClick={() => onSort(key)}>
@@ -142,9 +149,14 @@ function DisputeTable({ items, openId, onOpen, sort, onSort }: TableProps) {
           <tr>
             <th scope="col">Case</th>
             <th scope="col">Reason</th>
-            {header('amount', 'Amount', true)}
-            <th scope="col">Status</th>
-            <th scope="col">Stage</th>
+            {header('amount', 'Amount', 'num center')}
+            <th scope="col" className="center">
+              Status
+            </th>
+            {header('due', 'Reply by', 'center')}
+            <th scope="col" className="center">
+              Stage
+            </th>
             {header('created', 'Opened')}
             {header('updated', 'Last update')}
           </tr>
@@ -164,11 +176,18 @@ function DisputeTable({ items, openId, onOpen, sort, onSort }: TableProps) {
                 </button>
               </td>
               <td>{d.reason}</td>
-              <td className="num strong">{formatMoney(d.amount)}</td>
-              <td>
+              <td className="num center strong">{formatMoney(d.amount)}</td>
+              <td className="center">
                 <StatusPill status={d.status} />
               </td>
-              <td>{d.stage ?? '—'}</td>
+              <td className="center">
+                {statusOf(d.status).group === 'reply' && d.respond_by ? (
+                  <Deadline iso={d.respond_by} label="" />
+                ) : (
+                  <span className="muted">—</span>
+                )}
+              </td>
+              <td className="center">{d.stage ?? '—'}</td>
               <td>{formatDate(d.created)}</td>
               <td className="muted">
                 <span data-tip={formatAgo(d.updated)}>{formatDateTime(d.updated)}</span>
@@ -221,8 +240,10 @@ function Footer({ page, pages, from, to, total, onPage, pageSize, onPageSize }: 
   )
 }
 
+// Default order: cases that need a reply first, the soonest deadline at the top.
 const needsReplyFirst = (a: DisputeSummary, b: DisputeSummary) =>
-  Number(statusOf(b.status).group === 'reply') - Number(statusOf(a.status).group === 'reply')
+  Number(statusOf(b.status).group === 'reply') - Number(statusOf(a.status).group === 'reply') ||
+  SORT_VALUE.due(a) - SORT_VALUE.due(b)
 
 type Props = { openId: string | null; roomy: boolean; onOpen: (id: string) => void }
 
@@ -265,9 +286,9 @@ export default function DisputeList({ openId, roomy, onOpen }: Props) {
     setFilter(f)
     setPage(1)
   }
-  // First click on a column: newest / largest first; next click flips it.
+  // First click on a column: newest / largest first (Reply by: soonest first); next click flips it.
   const onSort = (key: SortKey) => {
-    setSort(sort?.key === key ? { key, desc: !sort.desc } : { key, desc: true })
+    setSort(sort?.key === key ? { key, desc: !sort.desc } : { key, desc: key !== 'due' })
     setPage(1)
   }
 

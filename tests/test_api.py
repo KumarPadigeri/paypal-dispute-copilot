@@ -80,6 +80,7 @@ def test_list_disputes_is_short_and_readable():
         "created": "2026-10-27T00:29:15.329Z",
         "updated": "2026-10-27T00:32:43.893Z",
         "stage": "Inquiry",
+        "respond_by": "2026-11-16T00:29:15.329Z",
     }
 
 

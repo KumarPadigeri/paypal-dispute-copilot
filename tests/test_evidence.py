@@ -16,6 +16,7 @@ def test_case_summary():
     assert case.reason == "Item not received"
     assert case.amount == "49.99 USD"
     assert case.respond_by == "Nov 16, 2026 (UTC)"
+    assert case.respond_by_iso == "2026-11-16T00:29:15.329Z"
     assert case.requested_from_seller == ["PROOF_OF_FULFILLMENT"]
 
 

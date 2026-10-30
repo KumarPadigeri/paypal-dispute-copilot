@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import Deadline from './Deadline'
 import DraftPanel from './DraftPanel'
 import { CaseSkeleton } from './Skeleton'
 import { AlertIcon, CloseIcon, CopyIcon } from './icons'
@@ -83,7 +84,12 @@ export default function CaseView({ id, onClose }: { id: string; onClose: () => v
             </h2>
             <p className="meta">
               {status.detail}
-              {c.respond_by && status.group === 'reply' && <> · reply by {c.respond_by.replace(' (UTC)', '')}</>}
+              {status.group === 'reply' && c.respond_by_iso && (
+              <>
+                {' · '}
+                <Deadline iso={c.respond_by_iso} />
+              </>
+            )}
             </p>
           </div>
           <div className="case-head-right">

@@ -65,7 +65,7 @@ export default function App() {
         Skip to disputes
       </a>
       <header className="topbar">
-        <img src="/favicon.svg" alt="" />
+        <img src="/favicon.svg?v=2" alt="" />
         <h1>Dispute Copilot</h1>
         <span className="tag">PayPal sandbox</span>
         <ThemeToggle />

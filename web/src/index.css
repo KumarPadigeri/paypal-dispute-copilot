@@ -542,6 +542,8 @@ body.resizing {
   padding: 12px 14px;
   cursor: pointer;
   transition: border-color 0.15s, background 0.15s;
+  /* Equal-height cards in grid view: keep lines at the top instead of spreading them out */
+  align-content: start;
 }
 
 .row:hover {
@@ -915,6 +917,16 @@ body.resizing {
   font-variant-numeric: tabular-nums;
 }
 
+.table .center {
+  text-align: center;
+}
+
+/* A centered sortable header gets a spacer as wide as its arrow, so the label sits truly centered */
+.table th.center .th-sort::before {
+  content: '';
+  width: 10px;
+}
+
 .table .strong {
   font-weight: 600;
 }
@@ -1058,6 +1070,8 @@ h2[tabindex='-1']:focus {
   color: inherit;
   text-transform: inherit;
   letter-spacing: inherit;
+  line-height: inherit;
+  vertical-align: top; /* an inline-flex button otherwise drops below the plain headers */
   cursor: pointer;
 }
 
@@ -1077,7 +1091,7 @@ th[aria-sort] .th-sort {
   width: 10px;
 }
 
-.table th.num .th-sort {
+.table th.num:not(.center) .th-sort {
   flex-direction: row-reverse;
 }
 
@@ -1417,6 +1431,10 @@ th[aria-sort] .th-sort {
   margin-left: auto;
 }
 
+.table td.center .sk {
+  margin-inline: auto;
+}
+
 /* Selected status chip: filled with its color, bubble inverted, so the choice is obvious */
 .chip.tone-warn.on .count { background: var(--bg); color: var(--warn); }
 .chip.tone-info.on .count { background: var(--bg); color: var(--accent); }
@@ -1460,4 +1478,34 @@ th[aria-sort] .th-sort {
   background: var(--surface-2);
   color: var(--muted);
   border-bottom: 1px solid var(--border-strong);
+}
+
+
+/* Reply-by deadline: words plus color (amber <= 5 days, red <= 2 days or overdue) */
+.due {
+  display: inline-flex;
+  vertical-align: middle;
+  align-items: center;
+  gap: 5px;
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.due svg {
+  width: 13px;
+  height: 13px;
+  flex: none;
+}
+
+.due.muted { color: var(--muted); }
+.due.warn { color: var(--warn); font-weight: 600; }
+.due.bad { color: var(--bad); font-weight: 600; }
+
+.due-label {
+  font-weight: 400;
+}
+
+.row .card-due {
+  grid-column: 1 / -1;
+  margin-top: 4px;
 }

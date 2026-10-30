@@ -46,10 +46,10 @@ class DisputeCase:
     buyer_claims: list[str]
     requested_from_seller: list[str]
     evidence: list[Evidence] = field(default_factory=list)
-    actions: list[str] = field(
-        default_factory=list
-    )  # what PayPal allows now, e.g. provide_evidence
+    # what PayPal allows now, e.g. provide_evidence
+    actions: list[str] = field(default_factory=list)
     shipments: list[dict] = field(default_factory=list)  # {"carrier", "tracking_number"}
+    respond_by_iso: str | None = None  # PayPal's reply-by date, machine-readable
 
 
 def money(m: dict) -> str:
@@ -164,6 +164,7 @@ def build_case(d: dict, trackers: list[dict] | None = None) -> DisputeCase:
         amount=money(d["dispute_amount"]),
         status=d["status"],
         respond_by=day(due) if due else None,
+        respond_by_iso=due,
         buyer_claims=claims,
         requested_from_seller=requested,
         evidence=evidence_from_dispute(d, trackers),

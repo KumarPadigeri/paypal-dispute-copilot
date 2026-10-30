@@ -1,6 +1,9 @@
 // Placeholder shapes shown while PayPal data loads. They match the real layout, so nothing
 // jumps when the content arrives. Screen readers hear one "Loading…" line instead.
 
+// Amount, Status, Reply by and Stage are centered, as in the real table
+const CENTER = [2, 3, 4, 5]
+
 const Line = ({ w, h = 12 }: { w: string; h?: number }) => (
   <span className="sk" style={{ width: w, height: h }} aria-hidden="true" />
 )
@@ -66,7 +69,7 @@ export function ListSkeleton({ asTable }: { asTable: boolean }) {
     </span>
   )
   if (asTable) {
-    const widths = ['150px', '130px', '60px', '96px', '56px', '96px', '110px']
+    const widths = ['150px', '130px', '60px', '96px', '120px', '56px', '96px', '110px']
     return (
       <div aria-busy="true">
         {label}
@@ -74,8 +77,8 @@ export function ListSkeleton({ asTable }: { asTable: boolean }) {
           <table className="table">
             <thead>
               <tr>
-                {['Case', 'Reason', 'Amount', 'Status', 'Stage', 'Opened', 'Last update'].map((h) => (
-                  <th key={h} className={h === 'Amount' ? 'num' : undefined}>
+                {['Case', 'Reason', 'Amount', 'Status', 'Reply by', 'Stage', 'Opened', 'Last update'].map((h, c) => (
+                  <th key={h} className={CENTER.includes(c) ? 'center' : undefined}>
                     {h}
                   </th>
                 ))}
@@ -85,7 +88,7 @@ export function ListSkeleton({ asTable }: { asTable: boolean }) {
               {[0, 1, 2, 3].map((r) => (
                 <tr key={r}>
                   {widths.map((w, c) => (
-                    <td key={c} className={c === 2 ? 'num' : undefined}>
+                    <td key={c} className={CENTER.includes(c) ? 'center' : undefined}>
                       <Line w={w} h={c === 3 ? 18 : 12} />
                     </td>
                   ))}

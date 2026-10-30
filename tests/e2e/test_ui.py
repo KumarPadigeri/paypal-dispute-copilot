@@ -129,3 +129,26 @@ def test_phone_layout_has_no_sideways_scroll(browser, base_url):
         expect(pg.locator(landmark).first).to_be_visible()
         assert pg.evaluate("document.documentElement.scrollWidth - innerWidth") == 0
     context.close()
+
+
+@pytest.mark.parametrize(
+    "now, text, tone",
+    [
+        ("2026-11-08T00:00:00Z", "Nov 16 · 8 days left", "muted"),
+        ("2026-11-12T00:00:00Z", "Nov 16 · 4 days left", "warn"),
+        ("2026-11-14T12:00:00Z", "Nov 16 · 1 day left", "bad"),
+        ("2026-11-17T00:00:00Z", "Overdue (was Nov 16)", "bad"),
+    ],
+)
+def test_reply_by_countdown_gets_louder_near_the_deadline(browser, base_url, now, text, tone):
+    # The fixture's reply-by date is 2026-11-16T00:29Z; the browser clock is frozen at `now`.
+    context = browser.new_context(
+        base_url=base_url, timezone_id="UTC", viewport={"width": 1366, "height": 768}
+    )
+    pg = context.new_page()
+    pg.clock.set_fixed_time(now)
+    pg.goto("/")
+    cell = pg.locator("tbody tr").first.locator(".due")
+    expect(cell).to_have_text(text)
+    expect(cell).to_have_class(f"due {tone}")
+    context.close()
