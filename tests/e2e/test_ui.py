@@ -162,12 +162,14 @@ def stage_states(pg: Page) -> list[tuple[str, str]]:
     ]
 
 
-def test_timeline_shows_the_current_stage_and_what_it_means(page: Page):
+def test_timeline_shows_the_current_stage_and_explains_each_on_hover(page: Page):
     page.goto("/#/case/PP-R-FOD-10194708")
     expect(page.locator(".stage")).to_have_count(3)
     assert stage_states(page) == [("Inquiry", "now"), ("Claim", "next"), ("Closed", "next")]
     expect(page.locator(".stage.now")).to_have_attribute("aria-current", "step")
-    expect(page.locator(".stage-note")).to_contain_text("the buyer can escalate it to a claim")
+    expect(page.locator(".stage-label").nth(1)).to_have_attribute(
+        "data-tip", "PayPal reviews both sides and decides"
+    )
 
 
 def test_timeline_marks_a_claim_skipped_when_the_case_closed_at_inquiry(page: Page):
@@ -183,7 +185,6 @@ def test_timeline_marks_a_claim_skipped_when_the_case_closed_at_inquiry(page: Pa
         ("Claim (skipped)", "skipped"),
         ("Closed", "done"),
     ]
-    expect(page.locator(".stage-note")).to_have_count(0)
 
 
 @pytest.mark.parametrize(

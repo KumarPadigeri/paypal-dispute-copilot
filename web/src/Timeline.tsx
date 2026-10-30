@@ -4,13 +4,13 @@ import { statusOf } from './status'
 
 const ARBITRATION = ['PRE_ARBITRATION', 'ARBITRATION']
 
-// What the current stage means, in plain words.
-const NOW: Record<string, string> = {
-  INQUIRY:
-    'Inquiry: you and the buyer try to settle it. If it is not settled, the buyer can escalate it to a claim and PayPal decides.',
-  CLAIM: 'Claim: PayPal reviews the evidence from both sides and decides.',
-  CHARGEBACK: "Chargeback: the buyer's card issuer reviews the evidence and decides.",
-  ARBITRATION: 'Arbitration: the last stage, where the final decision is made.',
+// What each stage means, shown on hover.
+const MEANS: Record<string, string> = {
+  INQUIRY: 'You and the buyer try to settle it',
+  CLAIM: 'PayPal reviews both sides and decides',
+  CHARGEBACK: "The buyer's card issuer decides",
+  ARBITRATION: 'The final decision',
+  CLOSED: 'The case is over',
 }
 
 type Step = { key: string; label: string; date?: string }
@@ -34,7 +34,6 @@ export default function Timeline({ c }: { c: CaseDetail }) {
   const reached = Math.max(0, steps.findIndex((s) => s.key === stageKey))
   const last = steps.length - 1
   const current = closed ? last : reached
-  const note = closed ? null : NOW[steps[current].key]
 
   // A case closed at the inquiry never went to a claim: that step shows as skipped, not done.
   const stateOf = (i: number) => {
@@ -53,7 +52,7 @@ export default function Timeline({ c }: { c: CaseDetail }) {
               <span className="stage-dot" aria-hidden="true">
                 {state === 'done' && <TickIcon />}
               </span>
-              <span className="stage-label">
+              <span className="stage-label" data-tip={MEANS[s.key]}>
                 {s.label}
                 {state === 'skipped' && <span className="sr-only"> (skipped)</span>}
               </span>
@@ -62,7 +61,6 @@ export default function Timeline({ c }: { c: CaseDetail }) {
           )
         })}
       </ol>
-      {note && <p className="stage-note">{note}</p>}
     </div>
   )
 }
