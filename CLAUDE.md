@@ -36,3 +36,11 @@ React + TypeScript + Vite, pytest, GitHub Actions. Hosting: Render (hackathon pa
 Inside the Game's backend is kept always awake for judging. On or after **Nov 10, 2026** (judging ends), put it
 back to sleep (no code change, just a setting): `az containerapp update -n inside-the-game-api -g rg-inside-the-game
 --min-replicas 0`. Remind me if I forget. After Nov 20 (winners), ask me about keeping it as a ~$0 portfolio demo.
+Also on Nov 10: fix Inside the Game's logging loop for good (see below), test, deploy. Until then its console
+logs are off and its monitoring workspace has a 0.05 GB/day cap (set Oct 30 to stop a log-cost runaway).
+
+## Lesson: avoid the Azure logging loop (cost ~$1.80/day in Inside the Game)
+If you send logs to Azure Monitor / Application Insights (configure_azure_monitor), the Azure SDK logs every
+HTTP upload at INFO, and those log lines are uploaded again: an endless loop. Right after configuring Azure
+Monitor, set `logging.getLogger("azure").setLevel(logging.WARNING)`. Put a daily cap on any Log Analytics
+workspace and keep the budget alert on.
