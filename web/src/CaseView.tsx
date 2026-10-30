@@ -43,12 +43,23 @@ export default function CaseView({ id, onClose }: { id: string; onClose: () => v
       </button>
     </div>
   )
-  if (error) return <>{bar}<div className="notice error">Could not load this case ({error}).</div></>
+  // The bar stays put; only the body below it scrolls (no sticky positioning, so nothing jumps).
+  if (error)
+    return (
+      <>
+        {bar}
+        <div className="case-body">
+          <div className="notice error">Could not load this case ({error}).</div>
+        </div>
+      </>
+    )
   if (!c)
     return (
       <>
         {bar}
-        <CaseSkeleton />
+        <div className="case-body">
+          <CaseSkeleton />
+        </div>
       </>
     )
 
@@ -64,70 +75,72 @@ export default function CaseView({ id, onClose }: { id: string; onClose: () => v
   return (
     <>
       {bar}
-      <section className="case-head">
-        <div>
-          <h2 ref={heading} tabIndex={-1}>
-            {c.reason}
-          </h2>
-          <p className="meta">
-            {status.detail}
-            {c.respond_by && status.group === 'reply' && <> · reply by {c.respond_by.replace(' (UTC)', '')}</>}
-          </p>
-        </div>
-        <div className="case-head-right">
-          <span className="case-amount">{formatAmount(c.amount)}</span>
-          <StatusPill status={c.status} />
-        </div>
-        {requested.length > 0 && (
-          <p className="asks">
-            PayPal asks you for: <strong>{requested.join(', ')}</strong>
-          </p>
-        )}
-      </section>
+      <div className="case-body">
+        <section className="case-head">
+          <div>
+            <h2 ref={heading} tabIndex={-1}>
+              {c.reason}
+            </h2>
+            <p className="meta">
+              {status.detail}
+              {c.respond_by && status.group === 'reply' && <> · reply by {c.respond_by.replace(' (UTC)', '')}</>}
+            </p>
+          </div>
+          <div className="case-head-right">
+            <span className="case-amount">{formatAmount(c.amount)}</span>
+            <StatusPill status={c.status} tipAlign="end" />
+          </div>
+          {requested.length > 0 && (
+            <p className="asks">
+              PayPal asks you for: <strong>{requested.join(', ')}</strong>
+            </p>
+          )}
+        </section>
 
-      {c.advice && <AdviceBox disputeId={c.dispute_id} advice={c.advice} amount={c.amount} onDone={load} />}
+        {c.advice && <AdviceBox disputeId={c.dispute_id} advice={c.advice} amount={c.amount} onDone={load} />}
 
-      <div className="columns">
-        <div className="stack">
-          <section className="panel">
-            <h3 className="section-title">What the buyer says</h3>
-            {c.claims.length === 0 && <p className="meta">The buyer left no message.</p>}
+        <div className="columns">
+          <div className="stack">
+            <section className="panel">
+              <h3 className="section-title">What the buyer says</h3>
+              {c.claims.length === 0 && <p className="meta">The buyer left no message.</p>}
+              <ol className="items">
+                {c.claims.map((cl) => (
+                  <li key={cl.id} className={`item ${answers.has(cl.id) ? 'lit' : ''}`}>
+                    <span className="badge claim">{cl.id}</span>
+                    <span>“{cl.text}”</span>
+                  </li>
+                ))}
+              </ol>
+              <p className="hint">Claims are answered, never used as proof.</p>
+            </section>
+
+            <DraftPanel
+              disputeId={c.dispute_id}
+              evidence={c.evidence}
+              canSend={canSend}
+              cantSendReason={cantSendReason}
+              draftBlocked={c.advice?.blocks_draft ?? false}
+              onFocus={setFocus}
+              onSent={load}
+            />
+          </div>
+
+          <section className="panel evidence-panel">
+            <h3 className="section-title">Evidence from PayPal</h3>
             <ol className="items">
-              {c.claims.map((cl) => (
-                <li key={cl.id} className={`item ${answers.has(cl.id) ? 'lit' : ''}`}>
-                  <span className="badge claim">{cl.id}</span>
-                  <span>“{cl.text}”</span>
+              {c.evidence.map((e) => (
+                <li key={e.id} className={`item ${cites.has(e.id) ? 'lit' : focus ? 'dim' : ''}`}>
+                  <span className="badge">{e.id}</span>
+                  <span>
+                    {e.text}
+                    <span className="source mono">{e.source}</span>
+                  </span>
                 </li>
               ))}
             </ol>
-            <p className="hint">Claims are answered, never used as proof.</p>
           </section>
-
-          <DraftPanel
-            disputeId={c.dispute_id}
-            evidence={c.evidence}
-            canSend={canSend}
-            cantSendReason={cantSendReason}
-            draftBlocked={c.advice?.blocks_draft ?? false}
-            onFocus={setFocus}
-            onSent={load}
-          />
         </div>
-
-        <section className="panel evidence-panel">
-          <h3 className="section-title">Evidence from PayPal</h3>
-          <ol className="items">
-            {c.evidence.map((e) => (
-              <li key={e.id} className={`item ${cites.has(e.id) ? 'lit' : focus ? 'dim' : ''}`}>
-                <span className="badge">{e.id}</span>
-                <span>
-                  {e.text}
-                  <span className="source mono">{e.source}</span>
-                </span>
-              </li>
-            ))}
-          </ol>
-        </section>
       </div>
     </>
   )

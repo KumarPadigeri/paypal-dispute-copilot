@@ -320,7 +320,7 @@ export default function DisputeList({ openId, roomy, onOpen }: Props) {
               <button aria-pressed={view === 'list'} aria-label="List view" data-tip="List view" onClick={() => setView('list')}>
                 <ListIcon />
               </button>
-              <button aria-pressed={view === 'grid'} aria-label="Grid view" data-tip="Grid view" onClick={() => setView('grid')}>
+              <button aria-pressed={view === 'grid'} aria-label="Grid view" data-tip="Grid view" data-tip-align="end" onClick={() => setView('grid')}>
                 <GridIcon />
               </button>
             </div>

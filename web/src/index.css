@@ -1,64 +1,6 @@
-/* Calm graphite palette: dark by default, light from the system setting or the toggle.
+/* Calm graphite palette: light by default, dark when the seller picks it (remembered).
    Text colors are checked for at least 4.5:1 contrast on every surface they sit on. */
 :root {
-  --bg: #16181c;
-  --surface: #1e2126;
-  --surface-2: #252930;
-  --border: #2f343c;
-  --border-strong: #454b55;
-  --text: #e7e9ec;
-  --muted: #9aa1ab;
-  --faint: #8a919b;
-  --accent: #8fb0e8;
-  --accent-hover: #a5c0ee;
-  --on-accent: #10131a;
-  --accent-soft: rgba(143, 176, 232, 0.12);
-  --ok: #8cc9a4;
-  --ok-soft: rgba(140, 201, 164, 0.12);
-  --warn: #e0c07f;
-  --warn-soft: rgba(224, 192, 127, 0.12);
-  --bad: #e39a9a;
-  --bad-soft: rgba(227, 154, 154, 0.12);
-  --lit: rgba(143, 176, 232, 0.14);
-  --link: #8ab4f8;
-  color-scheme: dark;
-  --radius: 10px;
-
-  font-family: Inter, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
-  font-size: 15px;
-  line-height: 1.5;
-  color: var(--text);
-  background: var(--bg);
-  -webkit-font-smoothing: antialiased;
-}
-
-@media (prefers-color-scheme: light) {
-  :root:not([data-theme='dark']) {
-    --bg: #f4f5f7;
-    --surface: #ffffff;
-    --surface-2: #eef0f3;
-    --border: #dcdfe4;
-    --border-strong: #b9bec7;
-    --text: #1d2127;
-    --muted: #555d68;
-    --faint: #616973;
-    --accent: #2d5ba8;
-    --accent-hover: #244b8c;
-    --on-accent: #ffffff;
-    --accent-soft: rgba(45, 91, 168, 0.1);
-    --ok: #256847;
-    --ok-soft: rgba(43, 118, 80, 0.1);
-    --warn: #7a5209;
-    --warn-soft: rgba(138, 93, 12, 0.1);
-    --bad: #b23838;
-    --bad-soft: rgba(178, 56, 56, 0.08);
-    --lit: rgba(45, 91, 168, 0.1);
-    --link: #0b57d0;
-    color-scheme: light;
-  }
-}
-
-:root[data-theme='light'] {
   --bg: #f4f5f7;
   --surface: #ffffff;
   --surface-2: #eef0f3;
@@ -80,6 +22,38 @@
   --lit: rgba(45, 91, 168, 0.1);
   --link: #0b57d0;
   color-scheme: light;
+  --radius: 10px;
+
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--text);
+  background: var(--bg);
+  -webkit-font-smoothing: antialiased;
+}
+
+:root[data-theme='dark'] {
+  --bg: #16181c;
+  --surface: #1e2126;
+  --surface-2: #252930;
+  --border: #2f343c;
+  --border-strong: #454b55;
+  --text: #e7e9ec;
+  --muted: #9aa1ab;
+  --faint: #8a919b;
+  --accent: #8fb0e8;
+  --accent-hover: #a5c0ee;
+  --on-accent: #10131a;
+  --accent-soft: rgba(143, 176, 232, 0.12);
+  --ok: #8cc9a4;
+  --ok-soft: rgba(140, 201, 164, 0.12);
+  --warn: #e0c07f;
+  --warn-soft: rgba(224, 192, 127, 0.12);
+  --bad: #e39a9a;
+  --bad-soft: rgba(227, 154, 154, 0.12);
+  --lit: rgba(143, 176, 232, 0.14);
+  --link: #8ab4f8;
+  color-scheme: dark;
 }
 
 * {
@@ -354,7 +328,7 @@ button {
 }
 
 .layout.has-case {
-  grid-template-columns: var(--list-w, 432px) 16px minmax(0, 1fr);
+  grid-template-columns: minmax(300px, min(var(--list-w, 432px), calc(100% - 560px))) 16px minmax(0, 1fr);
   column-gap: 4px;
 }
 
@@ -411,7 +385,7 @@ body.resizing {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin: -4px 0 12px;
+  margin: 0 0 12px;
 }
 
 .pane-bar .section-title {
@@ -1118,7 +1092,10 @@ th[aria-sort] .th-sort {
   position: relative;
 }
 
-[data-tip]::after {
+/* The tooltip box only exists while shown, so hidden tooltips never widen a panel
+   (a transparent one still takes room and caused a sideways scrollbar). */
+[data-tip]:hover::after,
+[data-tip]:focus-visible::after {
   content: attr(data-tip);
   position: absolute;
   top: calc(100% + 6px);
@@ -1135,8 +1112,12 @@ th[aria-sort] .th-sort {
   text-transform: none;
   white-space: nowrap;
   pointer-events: none;
-  opacity: 0;
-  transition: opacity 0.12s 0.2s;
+  animation: tip-in 0.12s ease-out 0.2s both;
+}
+
+@keyframes tip-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
 /* Buttons at the right edge open their tooltip leftwards so it stays on screen */
@@ -1146,10 +1127,6 @@ th[aria-sort] .th-sort {
   transform: none;
 }
 
-[data-tip]:hover::after,
-[data-tip]:focus-visible::after {
-  opacity: 1;
-}
 
 
 /* Public demo: replay label and PIN unlock */
@@ -1445,3 +1422,42 @@ th[aria-sort] .th-sort {
 .chip.tone-info.on .count { background: var(--bg); color: var(--accent); }
 .chip.tone-ok.on .count { background: var(--bg); color: var(--ok); }
 .chip[class*='tone-'].on svg { color: currentColor; }
+
+
+/* Desktop: the case panel is a fixed top bar plus a body that scrolls on its own */
+@media (min-width: 1001px) {
+  .layout .case-pane {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    padding: 2px 0 0 0;
+  }
+
+  .case-pane .pane-bar {
+    flex: none;
+    padding-right: 2px;
+  }
+
+  .case-body {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-gutter: stable;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border-strong) transparent;
+    padding: 0 2px 32px 0;
+  }
+
+  .evidence-panel {
+    top: 0;
+  }
+}
+
+
+/* Header row: a solid tint, stronger than the zebra stripes, so it never reads as data */
+.table thead th {
+  background: var(--surface-2);
+  color: var(--muted);
+  border-bottom: 1px solid var(--border-strong);
+}

@@ -105,15 +105,16 @@ def test_wrong_pin_is_refused_and_right_pin_unlocks(page: Page):
     expect(page.locator(".demo-note")).to_have_count(0)
 
 
-def test_theme_follows_the_system_then_the_toggle_is_remembered(browser, base_url):
+def test_light_by_default_even_on_a_dark_system_and_the_toggle_is_remembered(browser, base_url):
     context = browser.new_context(base_url=base_url, color_scheme="dark")
     pg = context.new_page()
     pg.goto("/")
-    expect(pg.get_by_role("button", name="Switch to light theme")).to_be_visible()
-    pg.get_by_role("button", name="Switch to light theme").click()
-    expect(pg.locator("html")).to_have_attribute("data-theme", "light")
+    expect(pg.get_by_role("button", name="Switch to dark theme")).to_be_visible()
+    assert pg.evaluate("getComputedStyle(document.body).backgroundColor") == "rgb(244, 245, 247)"
+    pg.get_by_role("button", name="Switch to dark theme").click()
+    expect(pg.locator("html")).to_have_attribute("data-theme", "dark")
     pg.reload()
-    expect(pg.locator("html")).to_have_attribute("data-theme", "light")
+    expect(pg.locator("html")).to_have_attribute("data-theme", "dark")
     context.close()
 
 
