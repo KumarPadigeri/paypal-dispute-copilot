@@ -62,15 +62,14 @@ def page(browser, base_url) -> Page:
 def test_cards_by_default_and_one_button_switches_to_the_list(page: Page):
     page.goto("/")
     expect(page.locator(".list .row")).to_have_count(2)
-    toggle = page.get_by_role("button", name="Switch to list view")
-    expect(toggle).to_have_attribute(
-        "data-tip", "Switch to list view"
-    )  # icon-only: say what it does
+    # Icon-only, so its tooltip names the view it opens
+    toggle = page.get_by_role("button", name="Grid View")
+    expect(toggle).to_have_attribute("data-tip", "Grid View")
     toggle.click()
     expect(page.locator("tbody tr")).to_have_count(2)
     page.reload()  # the choice is remembered
     expect(page.locator("tbody tr")).to_have_count(2)
-    page.get_by_role("button", name="Switch to card view").click()
+    page.get_by_role("button", name="Card View").click()
     expect(page.locator(".list .row")).to_have_count(2)
 
 
