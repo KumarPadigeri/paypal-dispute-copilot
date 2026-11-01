@@ -213,7 +213,8 @@ function Footer({ page, pages, from, to, total, onPage, pageSize, onPageSize }: 
   return (
     <div className="list-footer">
       <span aria-live="polite">
-        Showing {from}–{to} of {total}
+        {/* "1–4 of 4" says nothing a count can't: the range only appears when rows are hidden */}
+        {from === 1 && to === total ? `Showing all ${total}` : `Showing ${from}–${to} of ${total}`}
       </span>
       <nav className="pager" aria-label="Pages">
         <label className="rows-label">

@@ -59,6 +59,7 @@ def page(browser, base_url) -> Page:
 def test_list_shows_disputes_and_opens_a_case_from_its_id(page: Page):
     page.goto("/")
     expect(page.locator("tbody tr")).to_have_count(2)
+    expect(page.locator(".list-footer")).to_contain_text("Showing all 2")
     page.get_by_role("button", name="PP-R-FOD-10194708").click()
     expect(page.locator(".evidence-panel .item")).to_have_count(6)
     expect(page.locator(".case-head h2")).to_have_text("Item not received")
