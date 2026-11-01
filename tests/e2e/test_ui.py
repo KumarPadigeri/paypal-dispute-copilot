@@ -60,6 +60,7 @@ def test_list_shows_disputes_and_opens_a_case_from_its_id(page: Page):
     page.goto("/")
     expect(page.locator("tbody tr")).to_have_count(2)
     expect(page.locator(".list-footer")).to_contain_text("Showing all 2")
+
     page.get_by_role("button", name="PP-R-FOD-10194708").click()
     expect(page.locator(".evidence-panel .item")).to_have_count(6)
     expect(page.locator(".case-head h2")).to_have_text("Item not received")
@@ -222,3 +223,18 @@ def test_reply_by_shows_the_viewers_own_time_zone(browser, base_url, zone, text)
     # No tooltip: the line already says everything.
     expect(cell).not_to_have_attribute("data-tip", re.compile(".*"))
     context.close()
+
+
+def test_footer_counts_what_a_filter_shows_out_of_the_total(page: Page):
+    def one_waiting(route):
+        r = route.fetch()
+        items = r.json()
+        items[1]["status"] = "WAITING_FOR_BUYER_RESPONSE"
+        route.fulfill(response=r, json=items)
+
+    page.route("**/api/disputes", one_waiting)
+    page.goto("/")
+    expect(page.locator(".list-footer")).to_contain_text("Showing all 2")
+    page.locator(".chip", has_text="Waiting").click()
+    expect(page.locator("tbody tr")).to_have_count(1)
+    expect(page.locator(".list-footer")).to_contain_text("Showing 1 of 2")

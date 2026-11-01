@@ -200,12 +200,13 @@ function DisputeTable({ items, openId, onOpen, sort, onSort }: TableProps) {
   )
 }
 
-function Footer({ page, pages, from, to, total, onPage, pageSize, onPageSize }: {
+function Footer({ page, pages, from, to, total, all, onPage, pageSize, onPageSize }: {
   page: number
   pages: number
   from: number
   to: number
-  total: number
+  total: number // rows that match the filters
+  all: number // every dispute, before filtering
   onPage: (p: number) => void
   pageSize: number
   onPageSize: (n: number) => void
@@ -213,8 +214,12 @@ function Footer({ page, pages, from, to, total, onPage, pageSize, onPageSize }: 
   return (
     <div className="list-footer">
       <span aria-live="polite">
-        {/* "1–4 of 4" says nothing a count can't: the range only appears when rows are hidden */}
-        {from === 1 && to === total ? `Showing all ${total}` : `Showing ${from}–${to} of ${total}`}
+        {/* A range only when rows are on other pages; the overall total only when a filter hides some */}
+        {from === 1 && to === total
+          ? total === all
+            ? `Showing all ${all}`
+            : `Showing ${total} of ${all}`
+          : `Showing ${from}–${to} of ${total}${total < all ? ` (${all} in total)` : ''}`}
       </span>
       <nav className="pager" aria-label="Pages">
         <label className="rows-label">
@@ -378,6 +383,7 @@ export default function DisputeList({ openId, roomy, onOpen }: Props) {
             from={(current - 1) * size + 1}
             to={(current - 1) * size + shown.length}
             total={sorted.length}
+            all={disputes.length}
             onPage={setPage}
             pageSize={pageSize}
             onPageSize={(n) => {
