@@ -48,6 +48,9 @@ def browser():
         b.close()
 
 
+LIST_VIEW = "localStorage.setItem('view', 'list')"
+
+
 @pytest.fixture
 def page(browser, base_url) -> Page:
     context = browser.new_context(base_url=base_url, viewport={"width": 1366, "height": 768})
@@ -56,9 +59,24 @@ def page(browser, base_url) -> Page:
     context.close()
 
 
+def test_cards_by_default_and_one_button_switches_to_the_list(page: Page):
+    page.goto("/")
+    expect(page.locator(".list .row")).to_have_count(2)
+    toggle = page.get_by_role("button", name="Switch to list view")
+    expect(toggle).to_have_attribute(
+        "data-tip", "Switch to list view"
+    )  # icon-only: say what it does
+    toggle.click()
+    expect(page.locator("tbody tr")).to_have_count(2)
+    page.reload()  # the choice is remembered
+    expect(page.locator("tbody tr")).to_have_count(2)
+    page.get_by_role("button", name="Switch to card view").click()
+    expect(page.locator(".list .row")).to_have_count(2)
+
+
 def test_list_shows_disputes_and_opens_a_case_from_its_id(page: Page):
     page.goto("/")
-    expect(page.locator("tbody tr")).to_have_count(2)
+    expect(page.locator("[data-open]")).to_have_count(2)
     expect(page.locator(".list-footer")).to_contain_text("Showing all 2")
 
     page.get_by_role("button", name="PP-R-FOD-10194708").click()
@@ -156,6 +174,7 @@ def test_reply_by_countdown_gets_louder_near_the_deadline(browser, base_url, now
     context = browser.new_context(
         base_url=base_url, timezone_id="UTC", viewport={"width": 1366, "height": 768}
     )
+    context.add_init_script(LIST_VIEW)
     pg = context.new_page()
     pg.clock.set_fixed_time(now)
     pg.goto("/")
@@ -215,6 +234,7 @@ def test_timeline_marks_a_claim_skipped_when_the_case_closed_at_inquiry(page: Pa
 )
 def test_reply_by_shows_the_viewers_own_time_zone(browser, base_url, zone, text):
     context = browser.new_context(base_url=base_url, timezone_id=zone)
+    context.add_init_script(LIST_VIEW)
     pg = context.new_page()
     pg.clock.set_fixed_time("2026-10-30T12:00:00Z")
     pg.goto("/")
@@ -236,7 +256,7 @@ def test_footer_counts_what_a_filter_shows_out_of_the_total(page: Page):
     page.goto("/")
     expect(page.locator(".list-footer")).to_contain_text("Showing all 2")
     page.locator(".chip", has_text="Waiting").click()
-    expect(page.locator("tbody tr")).to_have_count(1)
+    expect(page.locator("[data-open]")).to_have_count(1)
     expect(page.locator(".list-footer")).to_contain_text("Showing 1 of 2")
 
 
@@ -252,16 +272,18 @@ def axe_violations(pg: Page) -> list[str]:
 
 @pytest.mark.parametrize("theme", ["light", "dark"])
 @pytest.mark.parametrize(
-    "path, ready",
+    "path, ready, view",
     [
-        ("/", "tbody tr"),  # list
-        ("/#/case/PP-R-FOD-10194708", ".case-head"),  # case with a draft option
-        ("/#/case/PP-R-TEST-00000002", ".advice"),  # case with refund advice
+        ("/", ".list .row", "grid"),  # cards (the default)
+        ("/", "tbody tr", "list"),  # table
+        ("/#/case/PP-R-FOD-10194708", ".case-head", "grid"),  # case with a draft option
+        ("/#/case/PP-R-TEST-00000002", ".advice", "grid"),  # case with refund advice
     ],
 )
-def test_every_screen_passes_wcag_aa(browser, base_url, theme, path, ready):
+def test_every_screen_passes_wcag_aa(browser, base_url, theme, path, ready, view):
     context = browser.new_context(base_url=base_url, viewport={"width": 1366, "height": 900})
     context.add_init_script(f"localStorage.setItem('theme', '{theme}')")
+    context.add_init_script(f"localStorage.setItem('view', '{view}')")
     pg = context.new_page()
     pg.goto(path)
     pg.locator(ready).first.wait_for()

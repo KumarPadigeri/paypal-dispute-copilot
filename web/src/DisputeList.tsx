@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react'
-import { GridIcon, ListIcon } from './icons'
 import {
   type DisputeSummary,
   formatAgo,
@@ -60,38 +59,6 @@ const SORT_VALUE: Record<SortKey, (d: DisputeSummary) => number> = {
   due: (d) => (d.respond_by ? Date.parse(d.respond_by) : Number.MAX_SAFE_INTEGER),
 }
 
-type View = 'list' | 'grid'
-
-/** The seller's List/Grid choice, remembered in this browser (works without storage too). */
-function useView(): [View, (v: View) => void] {
-  const [view, setView] = useState<View>(() => {
-    try {
-      return localStorage.getItem('view') === 'grid' ? 'grid' : 'list'
-    } catch {
-      return 'list'
-    }
-  })
-  const save = (v: View) => {
-    setView(v)
-    try {
-      localStorage.setItem('view', v)
-    } catch {
-      /* private mode: keep it for this visit only */
-    }
-  }
-  return [view, save]
-}
-
-function useNarrow(query = '(max-width: 700px)') {
-  const [narrow, setNarrow] = useState(() => matchMedia(query).matches)
-  useEffect(() => {
-    const mq = matchMedia(query)
-    const onChange = () => setNarrow(mq.matches)
-    mq.addEventListener('change', onChange)
-    return () => mq.removeEventListener('change', onChange)
-  }, [query])
-  return narrow
-}
 
 type ItemsProps = { items: DisputeSummary[]; openId: string | null; onOpen: (id: string) => void }
 
@@ -251,9 +218,9 @@ const needsReplyFirst = (a: DisputeSummary, b: DisputeSummary) =>
   Number(statusOf(b.status).group === 'reply') - Number(statusOf(a.status).group === 'reply') ||
   SORT_VALUE.due(a) - SORT_VALUE.due(b)
 
-type Props = { openId: string | null; roomy: boolean; onOpen: (id: string) => void }
+type Props = { openId: string | null; asTable: boolean; onOpen: (id: string) => void }
 
-export default function DisputeList({ openId, roomy, onOpen }: Props) {
+export default function DisputeList({ openId, asTable, onOpen }: Props) {
   const [disputes, setDisputes] = useState<DisputeSummary[] | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [filter, setFilter] = useState<'all' | Group>('all')
@@ -261,10 +228,6 @@ export default function DisputeList({ openId, roomy, onOpen }: Props) {
   const [sort, setSort] = useState<Sort>(null) // none picked: cases needing a reply first
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = usePageSize()
-  const [view, setView] = useView()
-  const narrow = useNarrow()
-  // A table needs room: phones, and a narrow list beside an open case, get cards.
-  const asTable = view === 'list' && !narrow && (!openId || roomy)
 
   const [allReasons, setAllReasons] = useState<string[]>([])
 
@@ -342,16 +305,6 @@ export default function DisputeList({ openId, roomy, onOpen }: Props) {
           })}
         </div>
         <div className="toolbar-right">
-          {!narrow && (!openId || roomy) && (
-            <div className="segmented" role="group" aria-label="Layout">
-              <button aria-pressed={view === 'list'} aria-label="List view" data-tip="List view" onClick={() => setView('list')}>
-                <ListIcon />
-              </button>
-              <button aria-pressed={view === 'grid'} aria-label="Grid view" data-tip="Grid view" data-tip-align="end" onClick={() => setView('grid')}>
-                <GridIcon />
-              </button>
-            </div>
-          )}
         </div>
       </div>
 

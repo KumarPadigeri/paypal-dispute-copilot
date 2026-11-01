@@ -3,6 +3,8 @@ import CaseView from './CaseView'
 import DisputeList from './DisputeList'
 import Splitter, { LIST_DEFAULT } from './Splitter'
 import ThemeToggle from './ThemeToggle'
+import ViewToggle from './ViewToggle'
+import { useView, useNarrow } from './view'
 
 // Tiny hash router: "#/case/<id>" opens a case, anything else shows the list.
 const caseIdFromHash = () => {
@@ -35,6 +37,10 @@ export default function App() {
   const [openId, setOpenId] = useState<string | null>(caseIdFromHash)
   const [listWidth, setListWidth] = useListWidth()
   const layout = useRef<HTMLElement>(null)
+  const [view, setView] = useView()
+  // A table needs room: phones, and a narrow list beside an open case, always get cards.
+  const narrow = useNarrow()
+  const tableFits = !narrow && (!openId || listWidth >= TABLE_MIN)
 
   useEffect(() => {
     const onHash = () => setOpenId(caseIdFromHash())
@@ -68,6 +74,7 @@ export default function App() {
         <img src="/favicon.svg?v=2" alt="" />
         <h1>Dispute Copilot</h1>
         <span className="tag">PayPal sandbox</span>
+        {tableFits && <ViewToggle view={view} onChange={setView} />}
         <ThemeToggle />
       </header>
       {/* No case open: list uses the full width. Case open: list left, case panel right
@@ -85,7 +92,7 @@ export default function App() {
           </h2>
           <DisputeList
             openId={openId}
-            roomy={listWidth >= TABLE_MIN}
+            asTable={tableFits && view === 'list'}
             onOpen={(id) => (location.hash = `/case/${encodeURIComponent(id)}`)}
           />
         </section>

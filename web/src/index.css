@@ -1175,6 +1175,12 @@ h2[tabindex='-1']:focus,
     position: static;
   }
 
+  /* Full-width list: no reserved scrollbar room, so both sides have the same gap. (Beside an open
+     case it keeps the room, mirrored on the case panel, so the splitter gaps match.) */
+  .layout:not(.has-case) .list-pane {
+    scrollbar-gutter: auto;
+  }
+
   .splitter {
     min-height: 0;
   }
