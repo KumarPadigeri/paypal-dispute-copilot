@@ -34,7 +34,7 @@ const TABLE_MIN = 860 // list width at which the whole table fits beside an open
 export default function App() {
   const [openId, setOpenId] = useState<string | null>(caseIdFromHash)
   const [listWidth, setListWidth] = useListWidth()
-  const layout = useRef<HTMLDivElement>(null)
+  const layout = useRef<HTMLElement>(null)
 
   useEffect(() => {
     const onHash = () => setOpenId(caseIdFromHash())
@@ -72,12 +72,14 @@ export default function App() {
       </header>
       {/* No case open: list uses the full width. Case open: list left, case panel right
           with a close button (on phones the panel covers the screen). See index.css. */}
-      <div
+      {/* One <main> always (list and case are labelled sections inside it), so screen-reader
+          users can jump straight to the content and nothing sits outside a landmark. */}
+      <main
         ref={layout}
         className={`layout ${openId ? 'has-case' : ''}`}
         style={{ '--list-w': `${listWidth}px` } as React.CSSProperties}
       >
-        <aside className="list-pane">
+        <section className="list-pane" aria-labelledby="disputes">
           <h2 className="sr-only" id="disputes" tabIndex={-1}>
             Disputes
           </h2>
@@ -86,14 +88,14 @@ export default function App() {
             roomy={listWidth >= TABLE_MIN}
             onOpen={(id) => (location.hash = `/case/${encodeURIComponent(id)}`)}
           />
-        </aside>
+        </section>
         {openId && <Splitter width={listWidth} onChange={setListWidth} container={layout} />}
         {openId && (
-          <main className="case-pane">
+          <section className="case-pane" aria-label="Dispute details">
             <CaseView key={openId} id={openId} onClose={close} />
-          </main>
+          </section>
         )}
-      </div>
+      </main>
     </div>
   )
 }

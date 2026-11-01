@@ -26,16 +26,21 @@ export default function CaseView({ id, onClose }: { id: string; onClose: () => v
 
   useEffect(load, [load])
 
-  // Once the case has loaded, move focus into the panel (keyboard and screen-reader users land here).
+  // Focus moves into the panel at once (its title, while PayPal's data loads), then to the case
+  // heading when it arrives: keyboard and screen-reader users never land on nothing.
+  const title = useRef<HTMLSpanElement>(null)
   const heading = useRef<HTMLHeadingElement>(null)
   const loaded = c !== null
+  useEffect(() => {
+    title.current?.focus({ preventScroll: true })
+  }, [])
   useEffect(() => {
     if (loaded) heading.current?.focus({ preventScroll: true })
   }, [loaded])
 
   const bar = (
     <div className="pane-bar">
-      <span className="pane-title">
+      <span className="pane-title" ref={title} tabIndex={-1}>
         <span className="section-title">Dispute details</span>
         <span className="mono case-id">{id}</span>
         <CopyButton text={id} />

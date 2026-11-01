@@ -1105,7 +1105,8 @@ body.resizing {
   top: 12px;
 }
 
-h2[tabindex='-1']:focus {
+h2[tabindex='-1']:focus,
+.pane-title[tabindex='-1']:focus {
   outline: none;
 }
 

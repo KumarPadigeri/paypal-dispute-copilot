@@ -238,3 +238,42 @@ def test_footer_counts_what_a_filter_shows_out_of_the_total(page: Page):
     page.locator(".chip", has_text="Waiting").click()
     expect(page.locator("tbody tr")).to_have_count(1)
     expect(page.locator(".list-footer")).to_contain_text("Showing 1 of 2")
+
+
+AXE = Path(__file__).parent.parent.parent / "web" / "node_modules" / "axe-core" / "axe.min.js"
+WCAG = ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa", "best-practice"]
+
+
+def axe_violations(pg: Page) -> list[str]:
+    pg.add_script_tag(path=str(AXE))
+    res = pg.evaluate("tags => axe.run(document, {runOnly: {type: 'tag', values: tags}})", WCAG)
+    return [f"{v['id']}: {n['target'][0]}" for v in res["violations"] for n in v["nodes"]]
+
+
+@pytest.mark.parametrize("theme", ["light", "dark"])
+@pytest.mark.parametrize(
+    "path, ready",
+    [
+        ("/", "tbody tr"),  # list
+        ("/#/case/PP-R-FOD-10194708", ".case-head"),  # case with a draft option
+        ("/#/case/PP-R-TEST-00000002", ".advice"),  # case with refund advice
+    ],
+)
+def test_every_screen_passes_wcag_aa(browser, base_url, theme, path, ready):
+    context = browser.new_context(base_url=base_url, viewport={"width": 1366, "height": 900})
+    context.add_init_script(f"localStorage.setItem('theme', '{theme}')")
+    pg = context.new_page()
+    pg.goto(path)
+    pg.locator(ready).first.wait_for()
+    pg.wait_for_timeout(300)  # colors fade in
+    assert axe_violations(pg) == []
+    context.close()
+
+
+def test_opening_a_case_by_keyboard_moves_focus_into_it(page: Page):
+    page.goto("/")
+    page.locator("button[data-open]").first.focus()
+    page.keyboard.press("Enter")
+    expect(page.locator(".case-head h2")).to_be_focused()
+    page.keyboard.press("Escape")
+    expect(page.locator("button[data-open]").first).to_be_focused()
