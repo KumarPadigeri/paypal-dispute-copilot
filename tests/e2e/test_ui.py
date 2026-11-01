@@ -202,23 +202,20 @@ def test_timeline_marks_a_claim_skipped_when_the_case_closed_at_inquiry(page: Pa
 
 
 @pytest.mark.parametrize(
-    "zone, text, exact",
+    "zone, text",
     [
-        # Clocks went back on Nov 1: the deadline is in PST even though "now" is in PDT.
-        (
-            "America/Los_Angeles",
-            "Nov 15 · 16 days left",
-            "Reply before Nov 15, 2026, 4:29 PM PST (Nov 16, 00:29 UTC)",
-        ),
-        ("Asia/Kolkata", "Nov 16 · 16 days left", "Reply before Nov 16, 2026, 5:59 AM GMT+5:30"),
+        # Clocks went back on Nov 1; the date still comes from the zone's rules for that day.
+        ("America/Los_Angeles", "Nov 15 · 16 days left"),
+        ("Asia/Kolkata", "Nov 16 · 16 days left"),
     ],
 )
-def test_reply_by_shows_the_viewers_own_time_zone(browser, base_url, zone, text, exact):
+def test_reply_by_shows_the_viewers_own_time_zone(browser, base_url, zone, text):
     context = browser.new_context(base_url=base_url, timezone_id=zone)
     pg = context.new_page()
     pg.clock.set_fixed_time("2026-10-30T12:00:00Z")
     pg.goto("/")
     cell = pg.locator("tbody tr").first.locator(".due")
     expect(cell).to_have_text(text)
-    expect(cell).to_have_attribute("data-tip", re.compile("^" + re.escape(exact)))
+    # No tooltip: the line already says everything.
+    expect(cell).not_to_have_attribute("data-tip", re.compile(".*"))
     context.close()
