@@ -1538,6 +1538,12 @@ th[aria-sort] .th-sort {
     border-radius: var(--radius) var(--radius) 0 0;
   }
 
+  /* Mirror the list's scrollbar gutter + padding on the case panel's left, so the gaps either
+     side of the splitter match whatever the scrollbar width is */
+  .case-pane {
+    scrollbar-gutter: stable both-edges;
+  }
+
   .table-wrap + .list-footer {
     margin-top: 0;
     margin-bottom: 12px;
@@ -1593,7 +1599,7 @@ th[aria-sort] .th-sort {
     display: flex;
     flex-direction: column;
     overflow: hidden;
-    padding: 2px 0 0 0;
+    padding: 2px 0 0 2px;
   }
 
   .case-pane .pane-bar {
