@@ -1530,6 +1530,22 @@ th[aria-sort] .th-sort {
     background: var(--bg);
     border-top: 1px solid var(--border);
   }
+
+  /* Table view: the table's box runs down to the footer, and the footer is its bottom strip */
+  .table-wrap:has(+ .list-footer) {
+    flex: 1 0 auto;
+    border-bottom: none;
+    border-radius: var(--radius) var(--radius) 0 0;
+  }
+
+  .table-wrap + .list-footer {
+    margin-top: 0;
+    margin-bottom: 12px;
+    padding: 10px 14px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 0 0 var(--radius) var(--radius);
+  }
 }
 
 .select.small {
