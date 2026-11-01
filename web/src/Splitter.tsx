@@ -57,7 +57,6 @@ export default function Splitter({ width, onChange, container }: Props) {
       aria-valuenow={width}
       aria-valuemin={LIST_MIN}
       tabIndex={0}
-      title="Drag to resize · double-click to reset"
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}
