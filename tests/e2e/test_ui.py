@@ -178,6 +178,8 @@ def test_timeline_shows_the_current_stage_and_explains_each_on_hover(page: Page)
     expect(page.locator(".stage-date")).to_have_count(1)
     # The header line gives the deadline, not the status the pill already shows.
     expect(page.locator(".case-head .meta")).not_to_contain_text("waiting for your reply")
+    # Pills explain nothing on hover: their words are the whole message.
+    expect(page.locator(".pill[data-tip]")).to_have_count(0)
     expect(page.locator(".stage.now")).to_have_attribute("aria-current", "step")
     expect(page.locator(".stage-label").nth(1)).to_have_attribute(
         "data-tip", "PayPal reviews both sides and decides"

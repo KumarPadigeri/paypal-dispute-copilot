@@ -86,7 +86,7 @@ export default function CaseView({ id, onClose }: { id: string; onClose: () => v
           </h2>
           <div className="case-head-right">
             <span className="case-amount">{formatAmount(c.amount)}</span>
-            <StatusPill status={c.status} tipAlign="end" />
+            <StatusPill status={c.status} />
           </div>
           {/* The pill already says the status; this line adds only what it can't: the deadline
               (or who the case is waiting on) and what PayPal asks for. */}

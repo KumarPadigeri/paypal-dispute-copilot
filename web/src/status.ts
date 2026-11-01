@@ -13,7 +13,7 @@ export const GROUPS: Record<Group, { label: string; tone: Tone; Icon: () => JSX.
   resolved: { label: 'Resolved', tone: 'ok', Icon: CheckIcon },
 }
 
-// PayPal status -> group, plus the detail a seller needs (shown as a tooltip and in the case panel).
+// PayPal status -> group, plus the detail a seller needs (shown in the case panel).
 const BY_STATUS: Record<string, { group: Group; detail: string }> = {
   WAITING_FOR_SELLER_RESPONSE: { group: 'reply', detail: 'PayPal is waiting for your reply' },
   WAITING_FOR_BUYER_RESPONSE: { group: 'waiting', detail: 'Waiting for the buyer' },
