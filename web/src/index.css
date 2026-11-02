@@ -1667,3 +1667,121 @@ th[aria-sort] .th-sort {
   grid-column: 1 / -1;
   margin-top: 4px;
 }
+
+
+/* ── Style A: refined graphite. Same palette, softer depth, a header bar of its own ── */
+:root {
+  --radius: 12px;
+  --border: #e3e6ea;
+  --shadow: 0 1px 2px rgba(16, 24, 40, 0.05), 0 1px 3px rgba(16, 24, 40, 0.04);
+  --shadow-hover: 0 4px 12px rgba(16, 24, 40, 0.08);
+}
+
+:root[data-theme='dark'] {
+  --border: #2c3138;
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+  --shadow-hover: 0 6px 16px rgba(0, 0, 0, 0.45);
+}
+
+.app {
+  padding-top: 0;
+}
+
+/* The header is its own section: a full-width bar with a line under it */
+.topbar {
+  margin: 0 -16px 24px;
+  padding: 14px 16px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+}
+
+.topbar h1 {
+  font-size: 17px;
+  font-weight: 650;
+  letter-spacing: -0.015em;
+}
+
+.panel,
+.case-head,
+.table-wrap,
+.row,
+.table-wrap + .list-footer,
+.advice {
+  box-shadow: var(--shadow);
+}
+
+.row {
+  transition: box-shadow 0.15s, border-color 0.15s, background 0.15s;
+}
+
+.row:hover {
+  box-shadow: var(--shadow-hover);
+}
+
+.case-head h2,
+.case-amount {
+  font-size: 22px;
+  font-weight: 650;
+  letter-spacing: -0.02em;
+}
+
+.row .amount {
+  font-size: 17px;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+}
+
+.section-title {
+  font-size: 12px;
+  letter-spacing: 0.08em;
+}
+
+.table th {
+  font-size: 11.5px;
+  letter-spacing: 0.07em;
+}
+
+.btn {
+  border-radius: 8px;
+  font-weight: 550;
+}
+
+.btn.primary {
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.12);
+}
+
+/* Status chips, outlined: neutral, color only on the icon; the picked one is tinted with a
+   colored border and a filled count */
+.chip.tone-warn,
+.chip.tone-info,
+.chip.tone-ok {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--text);
+  box-shadow: 0 1px 2px rgba(16, 24, 40, 0.04);
+}
+
+.chip.tone-warn:hover,
+.chip.tone-info:hover,
+.chip.tone-ok:hover {
+  filter: none;
+  border-color: var(--border-strong);
+}
+
+.chip.tone-warn svg { color: var(--warn); }
+.chip.tone-info svg { color: var(--accent); }
+.chip.tone-ok svg { color: var(--ok); }
+
+.chip.tone-warn .count,
+.chip.tone-info .count,
+.chip.tone-ok .count {
+  background: var(--surface-2);
+  color: var(--muted);
+}
+
+.chip.tone-warn.on { background: var(--warn-soft); border-color: var(--warn); color: var(--warn); }
+.chip.tone-info.on { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); }
+.chip.tone-ok.on { background: var(--ok-soft); border-color: var(--ok); color: var(--ok); }
+.chip.tone-warn.on .count { background: var(--warn); color: var(--bg); }
+.chip.tone-info.on .count { background: var(--accent); color: var(--bg); }
+.chip.tone-ok.on .count { background: var(--ok); color: var(--bg); }
