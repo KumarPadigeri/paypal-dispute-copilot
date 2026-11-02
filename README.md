@@ -14,7 +14,11 @@ When a buyer opens a PayPal dispute, the seller has a deadline to answer with pr
 sellers often lose cases they should win: the proof (payment, order, tracking) sits on
 different screens, the deadline passes, or the reply is vague or angry. Generic AI writing
 tools make this riskier, not safer: one invented sentence ("the item was delivered") can
-lose the case.
+lose the case. Across card payments, merchants simply accept about 46% of chargebacks without a
+fight, and win only about one in five of the ones they do fight ([Mastercard's 2025 State of
+Chargebacks](https://www.chargebackgurus.com/blog/chargeback-stats-and-insights-from-mastercards-state-of-chargebacks-report),
+as summarised by Chargeback Gurus). PayPal disputes have the same shape: a deadline, proof
+spread over several screens, and a seller without time.
 
 ## What Dispute Copilot does
 
@@ -30,17 +34,25 @@ lose the case.
    (refund now, or refund after return) instead of drafting an argument it cannot back up.
 5. **The seller approves.** Nothing reaches PayPal until the seller clicks, and only the
    last *verified* reply can be sent.
+6. **An inbox built for the deadline.** Every case that needs a reply shows its reply-by date
+   in the seller's own time zone (amber at 5 days, red at 2), and the case panel shows the
+   dispute's stage (Inquiry → Claim → Closed).
+7. **Insights.** Two charts a merchant acts on: *money at stake by reply deadline* and *money
+   by dispute reason*. Click a bar (or the link under it) to open exactly those disputes.
 
 ## For judges: a 2-minute tour
 
 1. Open the **[live demo](https://dispute-copilot-zi8a.onrender.com/)**. It runs on Render's
    free plan: if it has been idle, the first load can take about a minute.
-2. Click the **$49.99** case (`PP-R-FOD-10194708`), then **Draft reply**. Without a PIN you see
+2. The inbox opens on cards; the list icon in the header switches to the **grid** (AG Grid:
+   sort any column, drag and resize columns, type in the filter row, pick dates from a
+   calendar, export what you see as CSV). The chart icon opens **Insights**.
+3. Click the **$49.99** case (`PP-R-FOD-10194708`), then **Draft reply**. Without a PIN you see
    a **replay of a real run**: the agent timeline, the Verifier's verdicts, the final reply.
    Point at a sentence to light up the evidence it cites.
-3. Look at the other cases: one was **refunded** and one got a **return offer**, both sent
+4. Look at the other cases: one was **refunded** and one got a **return offer**, both sent
    from this app through PayPal's dispute API.
-4. **Live AI and sending:** click *Have a demo PIN? Unlock live AI* and use the PIN from the
+5. **Live AI and sending:** click *Have a demo PIN? Unlock live AI* and use the PIN from the
    Devpost submission's private testing notes. Drafting then calls the real model, and
    *Approve & send* posts the evidence to the PayPal sandbox.
 
@@ -77,11 +89,16 @@ The rules that keep it honest:
 
 ## How PayPal is used
 
+Reads go through **PayPal's Agent Toolkit** (`paypal-agent-toolkit`): its dispute and
+shipment-tracking handlers list disputes, open one, and fetch its tracking, on a sandbox-only
+client. The actions the toolkit does not cover (or not in the shape a seller needs: refunding
+with `REFUND`, offering a refund after return, sending evidence) are direct REST calls.
+
 | PayPal API (sandbox) | Used for |
 |---|---|
 | `POST /v1/oauth2/token` | App authentication |
-| `GET /v1/customer/disputes`, `GET /v1/customer/disputes/{id}` | Dispute list, case details, buyer messages, what PayPal asks for |
-| `GET /v1/shipping/trackers` | Shipment tracking as evidence |
+| `GET /v1/customer/disputes`, `GET /v1/customer/disputes/{id}` (Agent Toolkit) | Dispute list, case details, buyer messages, what PayPal asks for, stage, reply-by date |
+| `GET /v1/shipping/trackers` (Agent Toolkit) | Shipment tracking as evidence |
 | `POST /v1/customer/disputes/{id}/provide-evidence` | Sending the verified reply with proof of fulfillment |
 | `POST /v1/customer/disputes/{id}/accept-claim` | "Refund the buyer now" |
 | `POST /v1/customer/disputes/{id}/make-offer` | "Offer refund after return" |
@@ -95,11 +112,33 @@ The rules that keep it honest:
 - The **Verifier** gets each sentence with only its cited evidence and returns a verdict and a
   reason per sentence. The loop (write, check, verify, one rewrite, remove) is plain code.
 
+## Sponsor tools
+
+- **AG Grid (Community)**: the dispute grid. Sorting, column resize and reorder (remembered),
+  a filter row (contains-text, dropdowns for status and PayPal's reasons, calendar pickers for
+  dates, a clear button per filter and *clear all*), quick search, a pinned case column, and
+  CSV export of exactly what is on screen.
+- **AG Charts (Community)**: the Insights charts, drawn in the app's colours in light and dark,
+  with click-through to the filtered inbox.
+- **Render**: the live demo. A Blueprint (`render.yaml`) builds the Docker image on every push
+  to `main`, with secrets kept as Render environment variables.
+- **Postman**: [`docs/postman`](docs/postman) has a collection of the whole API with a test on
+  every request (checked with newman).
+
+## Accessibility
+
+WCAG 2.2 AA is checked automatically: axe-core runs in the browser tests on cards, the grid, a
+case, the refund advice and Insights, in light and dark. Keyboard use (tab order, visible
+focus, Esc, splitter arrow keys), 200% zoom and reduced motion are checked by hand. Charts are
+one labelled image each, with the same numbers as links underneath. One finding is allowed in
+the tests and documented there: AG Grid's own layout wrappers inside its grid.
+
 ## Tech stack
 
-Python 3.11, FastAPI with server-sent events · Microsoft Agent Framework, Microsoft Foundry
-(gpt-5.4-mini) · React, TypeScript, Vite · pytest, Playwright, ruff, ESLint · GitHub Actions ·
-Docker on Render.
+Python 3.11, FastAPI with server-sent events · PayPal Agent Toolkit · Microsoft Agent
+Framework, Microsoft Foundry (gpt-5.4-mini) · React, TypeScript, Vite · AG Grid, AG Charts,
+react-day-picker, Inter · pytest, Playwright, axe-core, ruff, ESLint · GitHub Actions · Docker on
+Render. The grid and charts load only when first shown (first page load about 80 kB gzipped).
 
 ## Run it yourself
 
@@ -109,6 +148,8 @@ Python 3.11 and Node 20.
 ```bash
 cp .env.example .env            # fill in the PayPal sandbox app and Foundry endpoint
 python3.11 -m venv .venv && .venv/bin/pip install -r requirements-dev.txt
+.venv/bin/pip install --no-deps -r requirements-toolkit.txt   # PayPal Agent Toolkit, without its
+                                                               # LangChain/CrewAI extras we don't use
 npm --prefix web ci
 
 az login                         # local AI auth (the hosted app uses FOUNDRY_API_KEY)
@@ -130,9 +171,11 @@ CI runs both on every push.
 copilot/        evidence.py (facts from PayPal) · advice.py (when not to fight)
                 writer.py · verifier.py · pipeline.py (the loop) · submit.py (what is sent)
                 api.py (FastAPI + SSE) · demo.py (PIN, daily cap, replay) · paypal_client.py
-web/            React UI (list, case panel, live draft, approve and send)
+web/            React UI: cards and AG Grid inbox, case panel, live draft, approve and send,
+                Insights (AG Charts) · lazy-loaded grid and charts
 tests/          unit tests · e2e/ browser tests with a fake PayPal
 scripts/        add_tracking.py · record_replay.py · screenshots.py
+docs/postman/   Postman collection of the API
 ```
 
 ## Honest limitations
