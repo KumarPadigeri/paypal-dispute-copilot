@@ -442,3 +442,30 @@ def test_date_columns_filter_by_a_day_picked_in_the_calendar(browser, base_url):
     page.keyboard.press("Escape")  # Esc closes the calendar only
     expect(page.get_by_role("dialog")).to_have_count(0)
     context.close()
+
+
+def test_insights_answer_what_is_at_stake_and_why(page: Page):
+    page.goto("/")
+    page.get_by_role("link", name="Insights").click()
+    expect(page.get_by_role("heading", name="Insights")).to_be_focused()
+    charts = page.locator(".insight-chart[role=img]")
+    expect(charts).to_have_count(2)
+    # Both fixture disputes need a reply (Nov 16) and are "Item not received"
+    expect(charts.nth(0)).to_have_attribute(
+        "aria-label", re.compile(r"^Money at stake, by reply deadline: ")
+    )
+    expect(charts.nth(1)).to_have_attribute(
+        "aria-label", re.compile(r"Item not received \(2 cases\)", re.I)
+    )
+    assert axe_violations(page) == []
+    page.get_by_role("link", name="Back to disputes").first.click()
+    expect(page.locator(".list-footer")).to_be_visible()
+
+
+def test_skip_link_moves_focus_without_leaving_the_page(page: Page):
+    page.goto("/#/insights")
+    expect(page.get_by_role("heading", name="Insights")).to_be_focused()
+    page.get_by_role("link", name="Skip to content").focus()
+    page.keyboard.press("Enter")
+    expect(page.locator("main#main")).to_be_focused()
+    assert page.evaluate("location.hash") == "#/insights"

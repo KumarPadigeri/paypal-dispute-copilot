@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { lazy, Suspense, useEffect, useRef, useState } from 'react'
 import {
   type DisputeSummary,
   formatDate,
@@ -9,11 +9,13 @@ import {
 import Deadline from './Deadline'
 import { downloadCsv } from './csv'
 import Dashboard from './Dashboard'
-import DisputeGrid from './DisputeGrid'
 import { CloseIcon, SearchIcon } from './icons'
 import { ListSkeleton } from './Skeleton'
 import StatusPill from './StatusPill'
 import { GROUPS, type Group, statusOf } from './status'
+
+// AG Grid is the biggest part of the app: it loads the first time the grid view is shown
+const DisputeGrid = lazy(() => import('./DisputeGrid'))
 
 const PAGE_SIZES = [10, 20, 50, 0] // 0 = all rows
 
@@ -201,11 +203,7 @@ export default function DisputeList({ openId, asTable, onOpen, onExport }: Props
   return (
     <>
       {!openId && (
-        <Dashboard
-          disputes={disputes}
-          picked={picked}
-          onToggle={toggle}
-        />
+        <Dashboard disputes={disputes} />
       )}
       {/* Status chips, then a full-width search under them */}
       <div className="filters">
@@ -280,7 +278,8 @@ export default function DisputeList({ openId, asTable, onOpen, onExport }: Props
       ) : (
         <>
           {asTable ? (
-            <DisputeGrid
+            <Suspense fallback={<ListSkeleton asTable />}>
+              <DisputeGrid
               items={filtered}
               reasons={reasons}
               search={search}
@@ -294,6 +293,7 @@ export default function DisputeList({ openId, asTable, onOpen, onExport }: Props
               }}
               onReady={onExport}
             />
+            </Suspense>
           ) : (
             <DisputeCards items={shown} openId={openId} onOpen={onOpen} />
           )}

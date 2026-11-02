@@ -52,6 +52,12 @@ export const ListIcon = () => (
   </svg>
 )
 
+export const ChartIcon = () => (
+  <svg {...base}>
+    <path d="M2.5 13.5h11M4.5 11V7.5M8 11V4M11.5 11V6" />
+  </svg>
+)
+
 export const CalendarIcon = () => (
   <svg {...base}>
     <rect x="2.5" y="3.5" width="11" height="10" rx="1.5" />

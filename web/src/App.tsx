@@ -1,13 +1,17 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react'
 import CaseView from './CaseView'
 import DisputeList from './DisputeList'
 import Splitter, { LIST_DEFAULT } from './Splitter'
 import ThemeToggle from './ThemeToggle'
 import ViewToggle from './ViewToggle'
-import { DownloadIcon } from './icons'
+import { ChartIcon, DownloadIcon } from './icons'
 import { useView, useNarrow } from './view'
 
-// Tiny hash router: "#/case/<id>" opens a case, anything else shows the list.
+// Insights (AG Charts) loads only when it is opened
+const Insights = lazy(() => import('./Insights'))
+
+// Tiny hash router: "#/insights" shows Insights, "#/case/<id>" opens a case, anything else the list.
+const onInsights = () => location.hash === '#/insights'
 const caseIdFromHash = () => {
   const m = location.hash.match(/^#\/case\/(.+)$/)
   return m ? decodeURIComponent(m[1]) : null
@@ -36,6 +40,7 @@ const TABLE_MIN = 860 // list width at which the whole table fits beside an open
 
 export default function App() {
   const [openId, setOpenId] = useState<string | null>(caseIdFromHash)
+  const [insights, setInsights] = useState(onInsights)
   const [listWidth, setListWidth] = useListWidth()
   const layout = useRef<HTMLElement>(null)
   const [view, setView] = useView()
@@ -47,7 +52,10 @@ export default function App() {
   const onExport = useCallback((fn: (() => void) | null) => setExportCsv(() => fn), [])
 
   useEffect(() => {
-    const onHash = () => setOpenId(caseIdFromHash())
+    const onHash = () => {
+      setOpenId(caseIdFromHash())
+      setInsights(onInsights())
+    }
     window.addEventListener('hashchange', onHash)
     return () => window.removeEventListener('hashchange', onHash)
   }, [])
@@ -71,48 +79,75 @@ export default function App() {
 
   return (
     <div className="app">
-      <a className="skip" href="#disputes">
-        Skip to disputes
+      {/* Moves focus without touching the address (the address is our router) */}
+      <a
+        className="skip"
+        href="#main"
+        onClick={(e) => {
+          e.preventDefault()
+          document.getElementById('main')?.focus()
+        }}
+      >
+        Skip to content
       </a>
       <header className="topbar">
         <img src="/favicon.svg?v=2" alt="" />
         <h1>Dispute Copilot</h1>
         <span className="tag">PayPal sandbox</span>
-        {exportCsv && (
+        <a
+          className={`icon-btn ${insights ? 'on' : ''}`}
+          href={insights ? '#' : '#/insights'}
+          aria-label={insights ? 'Back to disputes' : 'Insights'}
+          aria-current={insights ? 'page' : undefined}
+          data-tip={insights ? 'Back to disputes' : 'Insights'}
+        >
+          <ChartIcon />
+        </a>
+        {!insights && exportCsv && (
           <button className="icon-btn" onClick={exportCsv} aria-label="Export CSV" data-tip="Export CSV">
             <DownloadIcon />
           </button>
         )}
-        {tableFits && <ViewToggle view={view} onChange={setView} />}
+        {!insights && tableFits && <ViewToggle view={view} onChange={setView} />}
         <ThemeToggle />
       </header>
       {/* No case open: list uses the full width. Case open: list left, case panel right
           with a close button (on phones the panel covers the screen). See index.css. */}
       {/* One <main> always (list and case are labelled sections inside it), so screen-reader
           users can jump straight to the content and nothing sits outside a landmark. */}
-      <main
-        ref={layout}
-        className={`layout ${openId ? 'has-case' : ''}`}
-        style={{ '--list-w': `${listWidth}px` } as React.CSSProperties}
-      >
-        <section className="list-pane" aria-labelledby="disputes">
-          <h2 className="sr-only" id="disputes" tabIndex={-1}>
-            Disputes
-          </h2>
-          <DisputeList
-            openId={openId}
-            asTable={tableFits && view === 'list'}
-            onExport={onExport}
-            onOpen={(id) => (location.hash = `/case/${encodeURIComponent(id)}`)}
-          />
-        </section>
-        {openId && <Splitter width={listWidth} onChange={setListWidth} container={layout} />}
-        {openId && (
-          <section className="case-pane" aria-label="Dispute details">
-            <CaseView key={openId} id={openId} onClose={close} />
+      {insights ? (
+        <main className="insights-page" id="main" tabIndex={-1}>
+          <Suspense fallback={<p className="muted">Loading Insights…</p>}>
+            <Insights />
+          </Suspense>
+        </main>
+      ) : (
+        <main
+          id="main"
+          tabIndex={-1}
+          ref={layout}
+          className={`layout ${openId ? 'has-case' : ''}`}
+          style={{ '--list-w': `${listWidth}px` } as React.CSSProperties}
+        >
+          <section className="list-pane" aria-labelledby="disputes">
+            <h2 className="sr-only" id="disputes" tabIndex={-1}>
+              Disputes
+            </h2>
+            <DisputeList
+              openId={openId}
+              asTable={tableFits && view === 'list'}
+              onExport={onExport}
+              onOpen={(id) => (location.hash = `/case/${encodeURIComponent(id)}`)}
+            />
           </section>
-        )}
-      </main>
+          {openId && <Splitter width={listWidth} onChange={setListWidth} container={layout} />}
+          {openId && (
+            <section className="case-pane" aria-label="Dispute details">
+              <CaseView key={openId} id={openId} onClose={close} />
+            </section>
+          )}
+        </main>
+      )}
     </div>
   )
 }
