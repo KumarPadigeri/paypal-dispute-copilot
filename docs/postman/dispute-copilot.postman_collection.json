@@ -1,0 +1,515 @@
+{
+  "info": {
+    "name": "Dispute Copilot API",
+    "_postman_id": "8a1f8a1e-6c1b-4d5e-9a57-dispute-copilot",
+    "description": "The API behind Dispute Copilot (PayPal AI Hackathon 2026): AI drafts PayPal dispute replies where every sentence cites PayPal evidence, a Verifier removes anything unproven, and the merchant approves before anything is sent.\n\nEverything runs against the **PayPal sandbox** (fake money, made-up customers).\n\n**Folders**\n1. **Read**: no PIN. Lists disputes and opens one with its numbered evidence (facts written by code from PayPal data, never by the AI).\n2. **Draft**: the Writer \u2192 Verifier stream (server-sent events). Without a PIN it is a free replay of a real run.\n3. **Act**: needs the demo PIN and really changes the sandbox case: send the verified reply, refund now, or offer a refund after return.\n\n**Variables**: `baseUrl` (the live demo; use http://localhost:8000 locally), `disputeId` (a case to read), `actDisputeId` (a case you are willing to change; empty on purpose), `demoPin` (empty on purpose).",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "https://dispute-copilot-zi8a.onrender.com"
+    },
+    {
+      "key": "disputeId",
+      "value": "PP-R-FOD-10194708"
+    },
+    {
+      "key": "actDisputeId",
+      "value": "",
+      "description": "A sandbox case you are willing to change. Left empty so nothing is sent by accident."
+    },
+    {
+      "key": "demoPin",
+      "value": "",
+      "description": "From the Devpost testing notes. Never commit it."
+    }
+  ],
+  "item": [
+    {
+      "name": "1 \u00b7 Read (no PIN)",
+      "item": [
+        {
+          "name": "Health",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/health",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "health"
+              ]
+            },
+            "description": "Is the server up? (The free Render plan can take about a minute to wake.)"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "pm.test('ok is true', () => pm.expect(pm.response.json().ok).to.eql(true));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "PayPal dispute reasons",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/reasons",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "reasons"
+              ]
+            },
+            "description": "PayPal's dispute reasons in plain words, in PayPal's order."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "pm.test('a list of reasons', () => pm.expect(pm.response.json()).to.be.an('array').that.includes('Item not received'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List disputes",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/disputes",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "disputes"
+              ]
+            },
+            "description": "The merchant's disputes from PayPal (read through PayPal's Agent Toolkit): id, status, reason, amount, stage, reply-by date."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "const list = pm.response.json();",
+                  "pm.test('each dispute has an id and status', () => list.forEach(d => { pm.expect(d.id).to.match(/^PP-/); pm.expect(d.status).to.be.a('string'); }));",
+                  "if (list.length && !pm.collectionVariables.get('disputeId')) pm.collectionVariables.set('disputeId', list[0].id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get one case with its evidence",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/disputes/{{disputeId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "disputes",
+                "{{disputeId}}"
+              ]
+            },
+            "description": "One dispute: the buyer's claims split into C1, C2 \u2026 and PayPal's facts as numbered evidence E1, E2 \u2026 (each with its source), plus advice when the evidence can't win."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "const c = pm.response.json();",
+                  "pm.test('numbered evidence with sources', () => c.evidence.forEach((e, i) => { pm.expect(e.id).to.eql('E' + (i + 1)); pm.expect(e.source).to.match(/^PayPal|^Compared/); }));",
+                  "pm.test('claims are numbered', () => c.claims.forEach((cl, i) => pm.expect(cl.id).to.eql('C' + (i + 1))));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Unknown case is 404",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/disputes/PP-R-NOPE-00000000",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "disputes",
+                "PP-R-NOPE-00000000"
+              ]
+            },
+            "description": "A case PayPal doesn't know comes back as a clean 404."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('404', () => pm.response.to.have.status(404));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Demo status",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/demo",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "demo"
+              ]
+            },
+            "description": "Whether a PIN is needed for live AI and how many live drafts are left today."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "pm.test('has pin_required', () => pm.expect(pm.response.json()).to.have.property('pin_required'));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "2 \u00b7 Draft",
+      "item": [
+        {
+          "name": "Draft a reply (replay without PIN)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/disputes/{{disputeId}}/draft",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "disputes",
+                "{{disputeId}}",
+                "draft"
+              ]
+            },
+            "description": "Server-sent events: writing \u2192 draft \u2192 verifying \u2192 verdicts \u2192 (rewriting) \u2192 final. Every final sentence cites evidence ids and the claims it answers. Without a PIN this is a free replay of a real run and can never be sent."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "pm.test('event stream', () => pm.expect(pm.response.headers.get('Content-Type')).to.include('text/event-stream'));",
+                  "pm.test('ends with a verified reply', () => pm.expect(pm.response.text()).to.include('event: final'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Draft a reply (live AI, with PIN)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/disputes/{{disputeId}}/draft?pin={{demoPin}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "disputes",
+                "{{disputeId}}",
+                "draft"
+              ],
+              "query": [
+                {
+                  "key": "pin",
+                  "value": "{{demoPin}}"
+                }
+              ]
+            },
+            "description": "Same stream with the real Writer and Verifier agents (Microsoft Agent Framework on Azure AI Foundry). Counts against the daily limit."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "pm.test('ends with a verified reply', () => pm.expect(pm.response.text()).to.include('event: final'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Check a PIN",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/demo/unlock",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "demo",
+                "unlock"
+              ]
+            },
+            "description": "Is this the demo PIN? (A wrong PIN waits a second, to slow guessing.)",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"pin\": \"{{demoPin}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "pm.test('has ok', () => pm.expect(pm.response.json()).to.have.property('ok'));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "3 \u00b7 Act (PIN; changes the sandbox case)",
+      "description": "Each of these really changes the PayPal sandbox case in `actDisputeId`. Set it to a case you are willing to change.",
+      "item": [
+        {
+          "name": "Send the verified reply to PayPal",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Demo-Pin",
+                "value": "{{demoPin}}",
+                "description": "The demo PIN (in the Devpost testing notes). Never saved in this file."
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/disputes/{{actDisputeId}}/send",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "disputes",
+                "{{actDisputeId}}",
+                "send"
+              ]
+            },
+            "description": "The merchant's approval: sends the last VERIFIED reply (never browser-typed text) plus the tracking number as proof of shipping (PayPal provide-evidence). Draft that case live first."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('sent, or a clear refusal', () => pm.expect([200, 403, 409, 502]).to.include(pm.response.code));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Refund the buyer now",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Demo-Pin",
+                "value": "{{demoPin}}",
+                "description": "The demo PIN (in the Devpost testing notes). Never saved in this file."
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/disputes/{{actDisputeId}}/resolve",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "disputes",
+                "{{actDisputeId}}",
+                "resolve"
+              ]
+            },
+            "description": "Accepts the claim with a full refund (PayPal accept-claim). Only when the advice offers it.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"action\": \"refund\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('done, or a clear refusal', () => pm.expect([200, 403, 409, 502]).to.include(pm.response.code));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Offer a refund after return",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Demo-Pin",
+                "value": "{{demoPin}}",
+                "description": "The demo PIN (in the Devpost testing notes). Never saved in this file."
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/disputes/{{actDisputeId}}/resolve",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "disputes",
+                "{{actDisputeId}}",
+                "resolve"
+              ]
+            },
+            "description": "Offers a full refund once the item is returned to the merchant's address (PayPal make-offer REFUND_WITH_RETURN).",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"action\": \"refund_after_return\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('done, or a clear refusal', () => pm.expect([200, 403, 409, 502]).to.include(pm.response.code));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Without a PIN, sending is refused",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/disputes/PP-R-NOPE-00000000/send",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "disputes",
+                "PP-R-NOPE-00000000",
+                "send"
+              ]
+            },
+            "description": "Safe to run anywhere: it uses a case id that doesn't exist. On the live demo (a PIN is set) it is refused with 403 before anything reaches PayPal; on a local server without a PIN it fails with 404/409. It never touches a real case."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('refused', () => pm.expect([403, 404, 409]).to.include(pm.response.code));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
