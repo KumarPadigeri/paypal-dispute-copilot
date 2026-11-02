@@ -1,5 +1,6 @@
 import { type DisputeSummary, formatMoney } from './api'
 import { dueOf } from './due'
+import { ClockIcon, MoneyIcon, ReplyIcon } from './icons'
 import { statusOf } from './status'
 
 /** Money adds up only within one currency; otherwise say how many are open. */
@@ -25,16 +26,32 @@ export default function Dashboard({ disputes }: { disputes: DisputeSummary[] }) 
   return (
     <section className="dashboard" aria-label="Summary">
       <div className="tile">
-        <span className="tile-label">Needs reply</span>
-        <span className="tile-value">{needReply.length}</span>
+        <span className="tile-text">
+          <span className="tile-label">Needs reply</span>
+          <span className="tile-value">{needReply.length}</span>
+        </span>
+        <span className="tile-icon warn" aria-hidden="true">
+          <ReplyIcon />
+        </span>
       </div>
       <div className="tile">
-        <span className="tile-label">Next deadline</span>
-        <span className={`tile-value small ${due ? due.tone : ''}`}>{due ? due.text : 'None'}</span>
+        <span className="tile-text">
+          <span className="tile-label">Next deadline</span>
+          <span className={`tile-value small ${due ? due.tone : ''}`}>{due ? due.text : 'None'}</span>
+        </span>
+        {/* the clock takes the countdown's color: amber at 5 days or fewer, red at 2 */}
+        <span className={`tile-icon ${due && due.tone !== 'muted' ? due.tone : 'neutral'}`} aria-hidden="true">
+          <ClockIcon />
+        </span>
       </div>
       <div className="tile">
-        <span className="tile-label">At stake</span>
-        <span className="tile-value">{amountAtStake(disputes)}</span>
+        <span className="tile-text">
+          <span className="tile-label">At stake</span>
+          <span className="tile-value">{amountAtStake(disputes)}</span>
+        </span>
+        <span className="tile-icon info" aria-hidden="true">
+          <MoneyIcon />
+        </span>
       </div>
     </section>
   )

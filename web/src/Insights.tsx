@@ -78,7 +78,8 @@ function ChartCard({ title, summary, options, links }: { title: string; summary:
             <li key={l.href}>
               <a href={l.href}>
                 {l.color && <span className="dot" style={{ background: l.color }} aria-hidden="true" />}
-                {l.label} <strong>{l.value}</strong>
+                <span className="insight-link-label">{l.label}</span>
+                <strong>{l.value}</strong>
               </a>
             </li>
           ))}

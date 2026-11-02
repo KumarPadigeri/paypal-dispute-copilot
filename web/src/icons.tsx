@@ -52,6 +52,14 @@ export const ListIcon = () => (
   </svg>
 )
 
+export const MoneyIcon = () => (
+  <svg {...base}>
+    <rect x="1.5" y="4" width="13" height="8" rx="1.5" />
+    <circle cx="8" cy="8" r="1.8" />
+    <path d="M4 6.2v3.6M12 6.2v3.6" />
+  </svg>
+)
+
 export const ArrowLeftIcon = () => (
   <svg {...base}>
     <path d="M13 8H3.5M7.5 4 3.5 8l4 4" />

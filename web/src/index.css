@@ -1829,8 +1829,9 @@ th[aria-sort] .th-sort {
 
 .dashboard .tile {
   display: flex;
-  flex-direction: column;
-  gap: 6px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
   margin: 0;
   padding: 12px 14px;
   background: var(--surface);
@@ -2258,21 +2259,43 @@ main:focus {
 }
 
 /* Drill-down links under each Insights chart */
+/* One row per bar: dot + name on the left, amount and cases on the right; the whole row is the link */
 .insight-links {
   display: flex;
-  flex-wrap: wrap;
-  gap: 6px 16px;
+  flex-direction: column;
   margin: 0;
   padding: 0;
   list-style: none;
   font-size: 13px;
+  border-top: 1px solid var(--border);
+}
+
+.insight-links li + li {
+  border-top: 1px solid var(--border);
 }
 
 .insight-links a {
-  display: inline-flex;
+  display: flex;
   align-items: center;
-  gap: 6px;
-  min-height: 24px;
+  gap: 8px;
+  min-height: 36px;
+  padding: 0 6px;
+  color: var(--text);
+  text-decoration: none;
+  border-radius: 6px;
+}
+
+.insight-links a:hover {
+  background: var(--surface-2);
+}
+
+.insight-links a:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+.insight-link-label {
+  flex: 1;
   color: var(--link);
   text-decoration: underline;
   text-underline-offset: 2px;
@@ -2281,6 +2304,7 @@ main:focus {
 .insight-links strong {
   color: var(--text);
   font-weight: 600;
+  font-variant-numeric: tabular-nums;
 }
 
 .insight-links .dot {
@@ -2306,4 +2330,37 @@ main:focus {
 .drill-tag strong {
   color: var(--text);
   font-weight: 600;
+}
+
+/* KPI tiles: words on the left, a tinted icon on the right */
+.tile-text {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.tile-icon {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+}
+
+.tile-icon svg {
+  width: 20px;
+  height: 20px;
+}
+
+.tile-icon.warn { color: var(--warn); background: var(--warn-soft); }
+.tile-icon.bad { color: var(--bad); background: var(--bad-soft); }
+.tile-icon.info { color: var(--accent); background: var(--accent-soft); }
+.tile-icon.neutral { color: var(--muted); background: var(--surface-2); }
+
+@media (max-width: 480px) {
+  .tile-icon {
+    display: none; /* three tiles side by side on a phone: the numbers need the room */
+  }
 }
