@@ -1,10 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import DayFilter from './DayFilter'
 import { CloseIcon } from './icons'
 import {
   CellStyleModule,
   ClientSideRowModelModule,
   ColumnApiModule,
   CsvExportModule,
+  DateFilterModule,
   DragAndDropModule,
   EventApiModule,
   GridStateModule,
@@ -36,6 +38,7 @@ ModuleRegistry.registerModules([
   ColumnApiModule, // export leaves out the clear-all column
   PaginationModule,
   TextFilterModule,
+  DateFilterModule, // calendar pickers for Opened, Reply by and Last update
   QuickFilterModule,
   RowApiModule,
   EventApiModule, // the clear-all button listens for filter changes
@@ -139,6 +142,45 @@ function ContainsFloatingFilter(props: FilterCellProps) {
     </span>
   )
 }
+
+// Date columns: a calendar button (DayFilter) in the filter row, matching the day in local time
+type DateModel = { filterType: 'date'; type: 'equals'; dateFrom: string } | null
+const ymd = (d: Date) =>
+  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')} 00:00:00`
+const fromModel = (m: DateModel) => {
+  if (!m?.dateFrom) return null
+  const [y, mo, d] = m.dateFrom.slice(0, 10).split('-').map(Number)
+  return new Date(y, mo - 1, d)
+}
+function DateFloatingFilter(props: CustomFloatingFilterProps<IFilter, DisputeSummary, unknown, DateModel> & { label: string }) {
+  const [day, setDay] = useState<Date | null>(fromModel(props.model))
+  useClearAll(() => setDay(null))
+  const pick = (d: Date | null) => {
+    setDay(d)
+    props.onModelChange(d ? { filterType: 'date', type: 'equals', dateFrom: ymd(d) } : null)
+  }
+  return (
+    <span className="grid-filter">
+      <DayFilter label={props.label} day={day} onPick={pick} />
+      {day && <ClearOne label={props.label} onClear={() => pick(null)} />}
+    </span>
+  )
+}
+const sameDay = (picked: Date, cell: Date | null) => {
+  if (!cell) return -1
+  const d = new Date(cell.getFullYear(), cell.getMonth(), cell.getDate()).getTime()
+  return d === picked.getTime() ? 0 : d < picked.getTime() ? -1 : 1
+}
+const dateFilter = (label: string) =>
+  ({
+    filter: 'agDateColumnFilter',
+    filterParams: { comparator: sameDay, filterOptions: ['equals'], maxNumConditions: 1 },
+    floatingFilter: true,
+    floatingFilterComponent: DateFloatingFilter,
+    floatingFilterComponentParams: { label },
+    suppressHeaderFilterButton: true,
+    suppressFloatingFilterButton: true,
+  }) as const
 
 const containsFilter = (label: string) =>
   ({
@@ -309,8 +351,7 @@ export default function DisputeGrid({ items, reasons, search, page, pageSize, op
         cellRenderer: (p: ICellRendererParams<DisputeSummary>) =>
           p.value ? <Deadline iso={p.data?.respond_by} label="" /> : <span className="muted">—</span>,
         comparator: byTime,
-        filterValueGetter: (p) => (p.data && statusOf(p.data.status).group === 'reply' ? formatDate(p.data.respond_by) : ''),
-        ...containsFilter('Reply by'),
+        ...dateFilter('Reply by'),
         cellClass: 'center',
         headerClass: 'center',
         minWidth: 190,
@@ -329,9 +370,8 @@ export default function DisputeGrid({ items, reasons, search, page, pageSize, op
         colId: 'created',
         valueGetter: (p) => time(p.data?.created ?? null),
         valueFormatter: (p) => formatDate(p.data?.created ?? null),
-        filterValueGetter: (p) => formatDate(p.data?.created ?? null),
         comparator: byTime,
-        ...containsFilter('Opened'),
+        ...dateFilter('Opened'),
         minWidth: 140,
       },
       {
@@ -340,9 +380,8 @@ export default function DisputeGrid({ items, reasons, search, page, pageSize, op
         valueGetter: (p) => time(p.data?.updated ?? null),
         valueFormatter: (p) => formatDateTime(p.data?.updated ?? null),
         tooltipValueGetter: (p) => formatAgo(p.data?.updated ?? null),
-        filterValueGetter: (p) => formatDateTime(p.data?.updated ?? null),
         comparator: byTime,
-        ...containsFilter('Last update'),
+        ...dateFilter('Last update'),
         cellClass: 'muted',
         minWidth: 170,
       },

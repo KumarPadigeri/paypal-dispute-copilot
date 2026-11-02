@@ -415,3 +415,30 @@ def test_status_chips_combine(page: Page):
     expect(page.locator(".chip.on")).to_have_count(2)
     page.locator(".chip", has_text="Needs reply").click()  # off again
     expect(footer).to_contain_text("Showing 1 of 2")
+
+
+def test_date_columns_filter_by_a_day_picked_in_the_calendar(browser, base_url):
+    context = browser.new_context(base_url=base_url, timezone_id="UTC")
+    context.add_init_script(LIST_VIEW)
+    page = context.new_page()
+    page.clock.set_fixed_time("2026-11-02T12:00:00Z")  # the calendar opens on November 2026
+    page.goto("/")
+    footer = page.locator(".list-footer")
+    page.get_by_role("button", name="Reply by filter", exact=True).click()
+    calendar = page.get_by_role("dialog", name="Pick a reply by day")
+    expect(calendar).to_be_visible()
+    calendar.get_by_role(
+        "button", name="16 November 2026, Monday"
+    ).click()  # the fixture's reply-by day
+    expect(calendar).to_have_count(0)
+    expect(page.get_by_role("button", name="Reply by filter: Nov 16")).to_be_visible()
+    expect(footer).to_contain_text("Showing all 2")
+    page.get_by_role("button", name="Clear Reply by filter").click()
+    page.get_by_role("button", name="Opened filter", exact=True).click()
+    page.get_by_role("dialog").get_by_role("button", name="3 November 2026, Tuesday").click()
+    expect(footer).to_contain_text("Showing 0 of 2")
+    page.get_by_role("button", name="Opened filter: Nov 3").focus()
+    page.keyboard.press("Enter")
+    page.keyboard.press("Escape")  # Esc closes the calendar only
+    expect(page.get_by_role("dialog")).to_have_count(0)
+    context.close()

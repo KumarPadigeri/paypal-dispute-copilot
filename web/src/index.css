@@ -77,7 +77,8 @@ button {
 }
 
 .app {
-  max-width: 1440px;
+  /* fills a 1920 screen (a data inbox wants the width); only wider monitors get side space */
+  max-width: 1920px;
   margin: 0 auto;
   padding: 24px 16px 48px;
 }
@@ -1750,41 +1751,6 @@ th[aria-sort] .th-sort {
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.12);
 }
 
-/* Status chips, outlined: neutral, color only on the icon; the picked one is tinted with a
-   colored border and a filled count */
-.chip.tone-warn,
-.chip.tone-info,
-.chip.tone-ok {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  color: var(--text);
-  box-shadow: 0 1px 2px rgba(16, 24, 40, 0.04);
-}
-
-.chip.tone-warn:hover,
-.chip.tone-info:hover,
-.chip.tone-ok:hover {
-  filter: none;
-  border-color: var(--border-strong);
-}
-
-.chip.tone-warn svg { color: var(--warn); }
-.chip.tone-info svg { color: var(--accent); }
-.chip.tone-ok svg { color: var(--ok); }
-
-.chip.tone-warn .count,
-.chip.tone-info .count,
-.chip.tone-ok .count {
-  background: var(--surface-2);
-  color: var(--muted);
-}
-
-.chip.tone-warn.on { background: var(--warn-soft); border-color: var(--warn); color: var(--warn); }
-.chip.tone-info.on { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); }
-.chip.tone-ok.on { background: var(--ok-soft); border-color: var(--ok); color: var(--ok); }
-.chip.tone-warn.on .count { background: var(--warn); color: var(--bg); }
-.chip.tone-info.on .count { background: var(--accent); color: var(--bg); }
-.chip.tone-ok.on .count { background: var(--ok); color: var(--bg); }
 
 
 /* ── AG Grid: our table look on top of its Quartz theme ── */
@@ -2060,4 +2026,113 @@ th[aria-sort] .th-sort {
   overflow: hidden;
   clip: rect(0 0 0 0);
   white-space: nowrap;
+}
+
+/* Date filters: a calendar button with the picked day, and a calendar popup in our colors */
+.day-filter {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex: 1;
+  min-width: 0;
+  height: 28px;
+  padding: 0 2px;
+  font: inherit;
+  font-size: 13px;
+  color: var(--faint);
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid var(--border-strong);
+  cursor: pointer;
+}
+
+.day-filter.set {
+  color: var(--text);
+}
+
+.day-filter:hover {
+  color: var(--text);
+}
+
+.day-filter:focus-visible {
+  outline: none;
+  border-bottom: 2px solid var(--accent);
+}
+
+.day-popup {
+  position: fixed;
+  z-index: 50;
+  padding: 10px 12px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: 0 12px 32px rgba(16, 24, 40, 0.16);
+  color: var(--text);
+  font-size: 13px;
+}
+
+/* react-day-picker sets its variables on its own root, so ours go there too */
+.day-popup .rdp-root {
+  --rdp-accent-color: var(--accent);
+  --rdp-accent-background-color: var(--accent-soft);
+  --rdp-today-color: var(--accent);
+  --rdp-day-height: 34px;
+  --rdp-day-width: 34px;
+  --rdp-day_button-height: 32px;
+  --rdp-day_button-width: 32px;
+  --rdp-day_button-border-radius: 8px;
+  --rdp-selected-border: 0;
+  --rdp-nav-height: 34px;
+  --rdp-weekday-opacity: 1; /* full contrast: the color is already muted */
+  --rdp-outside-opacity: 1;
+}
+
+.day-popup .rdp-caption_label {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.day-popup .rdp-weekday {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--muted);
+  text-transform: uppercase;
+}
+
+.day-popup .rdp-chevron {
+  fill: var(--muted);
+}
+
+.day-popup .rdp-selected .rdp-day_button {
+  background: var(--accent);
+  color: var(--on-accent);
+  font-weight: 600;
+}
+
+.day-popup .rdp-day_button:hover {
+  background: var(--surface-2);
+}
+
+.day-popup .rdp-day_button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.day-popup .rdp-outside {
+  color: var(--faint);
+}
+
+/* Desktop: a little more breathing room at the sides; the header bar still runs edge to edge */
+@media (min-width: 1001px) {
+  .app {
+    padding-left: 24px;
+    padding-right: 24px;
+  }
+
+  .topbar {
+    margin-left: -24px;
+    margin-right: -24px;
+    padding-left: 24px;
+    padding-right: 24px;
+  }
 }
