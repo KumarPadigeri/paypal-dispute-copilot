@@ -10,7 +10,7 @@ import Deadline from './Deadline'
 import { downloadCsv } from './csv'
 import Dashboard from './Dashboard'
 import DisputeGrid from './DisputeGrid'
-import { SearchIcon } from './icons'
+import { CloseIcon, SearchIcon } from './icons'
 import { ListSkeleton } from './Skeleton'
 import StatusPill from './StatusPill'
 import { GROUPS, type Group, statusOf } from './status'
@@ -39,10 +39,10 @@ function usePageSize(): [number, (n: number) => void] {
 }
 
 // Status filters use the same words, icons and colors as the status pills (see status.ts).
-// They are toggles: click one to filter, click it again to show every dispute.
+// They are toggles and can be combined (e.g. Waiting + Resolved); none picked shows every dispute.
 const FILTERS = Object.keys(GROUPS) as Group[]
-const matches = (filter: 'all' | Group, d: DisputeSummary) =>
-  filter === 'all' || statusOf(d.status).group === filter
+const matches = (picked: Group[], d: DisputeSummary) =>
+  picked.length === 0 || picked.includes(statusOf(d.status).group as Group)
 
 // What an empty filter means, in plain words.
 const EMPTY: Record<'all' | Group, string> = {
@@ -149,7 +149,7 @@ type Props = {
 export default function DisputeList({ openId, asTable, onOpen, onExport }: Props) {
   const [disputes, setDisputes] = useState<DisputeSummary[] | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const [filter, setFilter] = useState<'all' | Group>('all')
+  const [picked, setPicked] = useState<Group[]>([]) // status chips that are on
   const [search, setSearch] = useState('')
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = usePageSize()
@@ -173,7 +173,7 @@ export default function DisputeList({ openId, asTable, onOpen, onExport }: Props
 
   // PayPal's full reason list (in PayPal's order), plus any reason a case has that the list lacks.
   const reasons = [...new Set([...allReasons, ...disputes.map((d) => d.reason)])]
-  const filtered = disputes.filter((d) => matches(filter, d))
+  const filtered = disputes.filter((d) => matches(picked, d))
   // Search: AG Grid's quick filter in the grid; the same words over the same fields for cards
   const q = search.trim().toLowerCase()
   const found = filtered.filter(
@@ -193,8 +193,8 @@ export default function DisputeList({ openId, asTable, onOpen, onExport }: Props
   cardRows.current = found
   const onPage = Math.max(0, Math.min(size, total - (current - 1) * size))
 
-  const pickFilter = (f: 'all' | Group) => {
-    setFilter(f)
+  const toggle = (g: Group) => {
+    setPicked((on) => (on.includes(g) ? on.filter((x) => x !== g) : FILTERS.filter((x) => x === g || on.includes(x))))
     setPage(1)
   }
 
@@ -203,8 +203,8 @@ export default function DisputeList({ openId, asTable, onOpen, onExport }: Props
       {!openId && (
         <Dashboard
           disputes={disputes}
-          filter={filter}
-          onFilter={pickFilter}
+          picked={picked}
+          onToggle={toggle}
         />
       )}
       {/* Status chips, then a full-width search under them */}
@@ -212,17 +212,17 @@ export default function DisputeList({ openId, asTable, onOpen, onExport }: Props
         <div className="chips" role="group" aria-label="Filter by status">
           {FILTERS.map((g) => {
             const group = GROUPS[g]
-            const on = filter === g
+            const on = picked.includes(g)
             return (
               <button
                 key={g}
                 className={`chip tone-${group.tone} ${on ? 'on' : ''}`}
                 aria-pressed={on}
-                onClick={() => pickFilter(on ? 'all' : g)}
+                onClick={() => toggle(g)}
               >
                 <group.Icon />
                 {group.label}
-                <span className="count">{disputes.filter((d) => matches(g, d)).length}</span>
+                <span className="count">{disputes.filter((d) => matches([g], d)).length}</span>
               </button>
             )
           })}
@@ -239,17 +239,37 @@ export default function DisputeList({ openId, asTable, onOpen, onExport }: Props
               setPage(1)
             }}
           />
+          {search && (
+            <button
+              type="button"
+              className="search-clear"
+              aria-label="Clear search"
+              onClick={() => {
+                setSearch('')
+                setPage(1)
+              }}
+            >
+              <CloseIcon />
+            </button>
+          )}
         </label>
       </div>
 
       {(asTable ? filtered.length === 0 : shown.length === 0) ? (
         <div className="notice empty-state">
-          <p>{disputes.length === 0 ? EMPTY.all : q ? 'No results.' : EMPTY[filter]}</p>
+          <p>
+            {disputes.length === 0
+              ? EMPTY.all
+              : q
+                ? 'No results.'
+                : picked.length === 1
+                  ? EMPTY[picked[0]]
+                  : 'No disputes with these statuses.'}</p>
           {disputes.length > 0 && (
             <button
               className="link"
               onClick={() => {
-                pickFilter('all')
+                setPicked([])
                 setSearch('')
               }}
             >

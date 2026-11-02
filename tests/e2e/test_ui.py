@@ -341,19 +341,24 @@ def test_grid_filter_row_contains_text_and_dropdowns(page: Page):
     footer = page.locator(".list-footer")
     expect(footer).to_contain_text("Showing all 2")
     # Type in the Case filter: matches when the id contains the text
-    page.locator(".ag-floating-filter[aria-colindex] input").first.fill("FOD")
+    page.get_by_role("textbox", name="Case filter", exact=True).fill("FOD")
     expect(footer).to_contain_text("Showing 1 of 2")
-    page.locator(".ag-floating-filter[aria-colindex] input").first.fill("")
+    page.get_by_role("textbox", name="Case filter", exact=True).fill("")
     expect(footer).to_contain_text("Showing all 2")
     # Status and Reason are dropdowns of their fixed values
-    page.get_by_label("Status filter").select_option("Resolved")
+    page.get_by_role("combobox", name="Status filter", exact=True).select_option("Resolved")
     expect(page.locator(".grid-empty")).to_have_text("No disputes match these filters.")
     expect(footer).to_contain_text("Showing 0 of 2")
-    page.get_by_label("Status filter").select_option("")
-    page.get_by_label("Reason filter").select_option("Item not received")
+    page.get_by_role("combobox", name="Status filter", exact=True).select_option("")
+    page.get_by_role("combobox", name="Reason filter", exact=True).select_option(
+        "Item not received"
+    )
     expect(footer).to_contain_text("Showing all 2")
-    # No sort arrows, but a header click still sorts
+    # No sort arrows until a header is clicked; then only that column shows one
     expect(page.locator(".ag-sort-indicator-icon:visible")).to_have_count(0)
+    page.locator(".ag-header-cell[col-id=amount] .ag-header-cell-label").click()
+    expect(page.locator(".ag-header-cell[col-id=amount] .ag-sort-ascending-icon")).to_be_visible()
+    expect(page.locator(".ag-sort-indicator-icon:visible")).to_have_count(1)
 
 
 def test_card_view_exports_what_it_shows(page: Page):
@@ -365,3 +370,48 @@ def test_card_view_exports_what_it_shows(page: Page):
     lines = Path(download.value.path()).read_text(encoding="utf-8-sig").splitlines()
     assert lines[0].startswith('"Case","Reason","Amount","Status"')
     assert len(lines) == 2 and "PP-R-FOD-10194708" in lines[1]
+
+
+def test_clear_buttons_for_search_each_filter_and_all_filters(page: Page):
+    page.add_init_script(LIST_VIEW)
+    page.goto("/")
+    footer = page.locator(".list-footer")
+    page.fill(".search input", "FOD")
+    expect(footer).to_contain_text("Showing 1 of 2")
+    page.get_by_role("button", name="Clear search").click()
+    expect(page.locator(".search input")).to_have_value("")
+    case = page.get_by_role("textbox", name="Case filter", exact=True)
+    status = page.get_by_role("combobox", name="Status filter", exact=True)
+    clear_all = page.get_by_role("button", name="Clear all filters")
+    case.fill("FOD")
+    expect(footer).to_contain_text("Showing 1 of 2")
+    expect(clear_all).to_have_count(0)  # only once two or more filters are set
+    page.get_by_role("button", name="Clear Case filter").click()
+    expect(case).to_have_value("")
+    expect(footer).to_contain_text("Showing all 2")
+    case.fill("FOD")
+    status.select_option("Needs reply")
+    expect(clear_all).to_be_visible()
+    clear_all.click()
+    expect(case).to_have_value("")
+    expect(status).to_have_value("")
+    expect(footer).to_contain_text("Showing all 2")
+
+
+def test_status_chips_combine(page: Page):
+    def one_resolved(route):
+        r = route.fetch()
+        items = r.json()
+        items[1]["status"] = "RESOLVED"
+        route.fulfill(response=r, json=items)
+
+    page.route("**/api/disputes", one_resolved)
+    page.goto("/")
+    footer = page.locator(".list-footer")
+    page.locator(".chip", has_text="Needs reply").click()
+    expect(footer).to_contain_text("Showing 1 of 2")
+    page.locator(".chip", has_text="Resolved").click()  # both on: see both
+    expect(footer).to_contain_text("Showing all 2")
+    expect(page.locator(".chip.on")).to_have_count(2)
+    page.locator(".chip", has_text="Needs reply").click()  # off again
+    expect(footer).to_contain_text("Showing 1 of 2")

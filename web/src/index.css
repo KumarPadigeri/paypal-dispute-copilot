@@ -1956,7 +1956,19 @@ th[aria-sort] .th-sort {
 
 /* Dropdown filters in the grid's filter row */
 /* Filter row: each filter is a quiet underline, not a box; focus thickens it in the accent color */
-.grid-wrap .ag-floating-filter-input .ag-input-field-input,
+/* One filter cell: an underlined input or dropdown, with its own clear button at the end */
+.grid-filter {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  width: 100%;
+}
+
+.grid-filter input {
+  min-width: 0;
+}
+
+.grid-filter input,
 .grid-pick {
   width: 100%;
   height: 28px;
@@ -1971,21 +1983,16 @@ th[aria-sort] .th-sort {
   box-shadow: none;
 }
 
-.grid-wrap .ag-floating-filter-input .ag-input-field-input:focus,
+.grid-filter input:focus,
 .grid-pick:focus {
   outline: none;
   box-shadow: none;
   border-bottom: 2px solid var(--accent);
 }
 
-.grid-wrap .ag-floating-filter-input .ag-input-field-input::placeholder {
-  color: var(--faint);
-}
 
-/* No sort arrows in the headers: clicking still sorts, and aria-sort tells screen readers the order */
-.grid-wrap .ag-sort-indicator-container {
-  display: none;
-}
+
+/* Sort arrows only on the column being sorted (none on the others); aria-sort tells screen readers */
 
 .grid-empty {
   margin: 0;
@@ -2004,4 +2011,53 @@ th[aria-sort] .th-sort {
 /* A chart's canvas never spills over the filters below it */
 .dashboard .chart {
   overflow: hidden;
+}
+
+/* Clear buttons: the search box's own ✕, and one ✕ at the start of the grid's filter row */
+.search input::-webkit-search-cancel-button {
+  display: none;
+}
+
+.search-clear,
+.grid-clear {
+  display: inline-grid;
+  place-items: center;
+  flex: none; /* never squeezed below the 24px tap size (WCAG 2.5.8) */
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.search-clear:hover,
+.grid-clear:hover {
+  color: var(--text);
+  background: var(--surface-2);
+}
+
+.search-clear:focus-visible,
+.grid-clear:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+/* Pills in the grid: their own width, in the middle of the cell, with slimmer side padding */
+.grid-wrap .ag-cell .pill {
+  align-self: center; /* the card layout's "start" would pin it to the top of the cell */
+  width: auto;
+  padding-inline: 8px;
+}
+
+/* The clear-all column's header is named for screen readers only */
+.grid-wrap .ag-header-cell[col-id='clearFilters'] .ag-header-cell-text {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
 }

@@ -42,12 +42,12 @@ const chartBase = (colors: ReturnType<typeof useThemeColors>, title: string) => 
 
 type Props = {
   disputes: DisputeSummary[]
-  filter: 'all' | Group
-  onFilter: (g: 'all' | Group) => void
+  picked: Group[] // status chips that are on
+  onToggle: (g: Group) => void
 }
 
 /** At a glance: what needs you, by when, how much is at stake. Clicking a status slice filters the list. */
-export default function Dashboard({ disputes, filter, onFilter }: Props) {
+export default function Dashboard({ disputes, picked, onToggle }: Props) {
   const colors = useThemeColors()
 
   // The charts are hidden from screen readers, so nothing inside them may take keyboard focus either
@@ -103,13 +103,13 @@ export default function Dashboard({ disputes, filter, onFilter }: Props) {
           strokeWidth: 0,
           highlightStyle: { item: { fillOpacity: 0.8 } },
           listeners: {
-            nodeClick: (e: { datum: { group: Group } }) => onFilter(filter === e.datum.group ? 'all' : e.datum.group),
+            nodeClick: (e: { datum: { group: Group } }) => onToggle(e.datum.group), // same as its chip
           },
         },
       ],
     }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [colors, disputes, filter],
+    [colors, disputes, picked],
   )
 
   const bars = useMemo<AgChartOptions>(
