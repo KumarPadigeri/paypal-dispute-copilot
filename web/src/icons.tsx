@@ -52,6 +52,19 @@ export const ListIcon = () => (
   </svg>
 )
 
+export const SearchIcon = () => (
+  <svg {...base}>
+    <circle cx="7" cy="7" r="4.5" />
+    <path d="m10.4 10.4 3.1 3.1" />
+  </svg>
+)
+
+export const DownloadIcon = () => (
+  <svg {...base}>
+    <path d="M8 2.5v8M4.8 7.5 8 10.7l3.2-3.2M3 13.5h10" />
+  </svg>
+)
+
 export const GridIcon = () => (
   <svg {...base}>
     <rect x="2.5" y="2.5" width="4.5" height="4.5" rx="1" />

@@ -1,14 +1,14 @@
 import { useEffect, useState } from 'react'
 import {
   type DisputeSummary,
-  formatAgo,
   formatDate,
-  formatDateTime,
   formatMoney,
   listDisputes,
   listReasons,
 } from './api'
 import Deadline from './Deadline'
+import DisputeGrid from './DisputeGrid'
+import { SearchIcon } from './icons'
 import { ListSkeleton } from './Skeleton'
 import StatusPill from './StatusPill'
 import { GROUPS, type Group, statusOf } from './status'
@@ -50,14 +50,7 @@ const EMPTY: Record<'all' | Group, string> = {
   resolved: 'No resolved disputes yet.',
 }
 
-type SortKey = 'amount' | 'created' | 'updated' | 'due'
-type Sort = { key: SortKey; desc: boolean } | null
-const SORT_VALUE: Record<SortKey, (d: DisputeSummary) => number> = {
-  amount: (d) => Number(d.amount?.value ?? 0),
-  created: (d) => (d.created ? Date.parse(d.created) : 0),
-  updated: (d) => (d.updated ? Date.parse(d.updated) : 0),
-  due: (d) => (d.respond_by ? Date.parse(d.respond_by) : Number.MAX_SAFE_INTEGER),
-}
+const dueTime = (d: DisputeSummary) => (d.respond_by ? Date.parse(d.respond_by) : Number.MAX_SAFE_INTEGER)
 
 
 type ItemsProps = { items: DisputeSummary[]; openId: string | null; onOpen: (id: string) => void }
@@ -87,82 +80,6 @@ function DisputeCards({ items, openId, onOpen }: ItemsProps) {
           </span>
         </button>
       ))}
-    </div>
-  )
-}
-
-type TableProps = ItemsProps & { sort: Sort; onSort: (key: SortKey) => void }
-
-function DisputeTable({ items, openId, onOpen, sort, onSort }: TableProps) {
-  const header = (key: SortKey, label: string, className?: string) => (
-    <th
-      scope="col"
-      className={className}
-      aria-sort={sort?.key === key ? (sort.desc ? 'descending' : 'ascending') : undefined}
-    >
-      <button className="th-sort" onClick={() => onSort(key)}>
-        {label}
-        <span className="arrow" aria-hidden="true">
-          {sort?.key === key ? (sort.desc ? '▼' : '▲') : ''}
-        </span>
-      </button>
-    </th>
-  )
-
-  return (
-    <div className="table-wrap">
-      <table className="table">
-        <thead>
-          <tr>
-            <th scope="col">Case</th>
-            <th scope="col">Reason</th>
-            {header('amount', 'Amount', 'num center')}
-            <th scope="col" className="center">
-              Status
-            </th>
-            {header('due', 'Reply by', 'center')}
-            <th scope="col" className="center">
-              Stage
-            </th>
-            {header('created', 'Opened')}
-            {header('updated', 'Last update')}
-          </tr>
-        </thead>
-        <tbody>
-          {items.map((d) => (
-            // Only the case id opens a case (a real button: works with mouse and keyboard).
-            <tr key={d.id} className={openId === d.id ? 'selected' : ''}>
-              <td>
-                <button
-                  className="link mono"
-                  data-open={d.id}
-                  aria-current={openId === d.id}
-                  onClick={() => onOpen(d.id)}
-                >
-                  {d.id}
-                </button>
-              </td>
-              <td>{d.reason}</td>
-              <td className="num center strong">{formatMoney(d.amount)}</td>
-              <td className="center">
-                <StatusPill status={d.status} />
-              </td>
-              <td className="center">
-                {statusOf(d.status).group === 'reply' && d.respond_by ? (
-                  <Deadline iso={d.respond_by} label="" />
-                ) : (
-                  <span className="muted">—</span>
-                )}
-              </td>
-              <td className="center">{d.stage ?? '—'}</td>
-              <td>{formatDate(d.created)}</td>
-              <td className="muted">
-                <span data-tip={formatAgo(d.updated)}>{formatDateTime(d.updated)}</span>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
     </div>
   )
 }
@@ -216,20 +133,31 @@ function Footer({ page, pages, from, to, total, all, onPage, pageSize, onPageSiz
 // Default order: cases that need a reply first, the soonest deadline at the top.
 const needsReplyFirst = (a: DisputeSummary, b: DisputeSummary) =>
   Number(statusOf(b.status).group === 'reply') - Number(statusOf(a.status).group === 'reply') ||
-  SORT_VALUE.due(a) - SORT_VALUE.due(b)
+  dueTime(a) - dueTime(b)
 
-type Props = { openId: string | null; asTable: boolean; onOpen: (id: string) => void }
+type Props = {
+  openId: string | null
+  asTable: boolean
+  onOpen: (id: string) => void
+  onExport: (exportCsv: (() => void) | null) => void // the header's export button, while the grid shows
+}
 
-export default function DisputeList({ openId, asTable, onOpen }: Props) {
+export default function DisputeList({ openId, asTable, onOpen, onExport }: Props) {
   const [disputes, setDisputes] = useState<DisputeSummary[] | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [filter, setFilter] = useState<'all' | Group>('all')
   const [reason, setReason] = useState('')
-  const [sort, setSort] = useState<Sort>(null) // none picked: cases needing a reply first
+  const [search, setSearch] = useState('')
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = usePageSize()
 
   const [allReasons, setAllReasons] = useState<string[]>([])
+  const [gridCount, setGridCount] = useState<number | null>(null) // rows left after the grid's column filters
+
+  // Export only exists while the grid is on screen
+  useEffect(() => {
+    if (!asTable) onExport(null)
+  }, [asTable, onExport])
 
   useEffect(() => {
     listDisputes().then((list) => setDisputes([...list].sort(needsReplyFirst)), (e: Error) => setError(e.message))
@@ -243,21 +171,26 @@ export default function DisputeList({ openId, asTable, onOpen }: Props) {
   const reasons = [...new Set([...allReasons, ...disputes.map((d) => d.reason)])]
   const reasonCount = (r: string) => disputes.filter((d) => d.reason === r).length
   const filtered = disputes.filter((d) => matches(filter, d) && (!reason || d.reason === reason))
-  const sorted = sort
-    ? [...filtered].sort((a, b) => (SORT_VALUE[sort.key](a) - SORT_VALUE[sort.key](b)) * (sort.desc ? -1 : 1))
-    : filtered
-  const size = pageSize || sorted.length || 1 // "All" = one page with every row
-  const pages = Math.max(1, Math.ceil(sorted.length / size))
+  // Search: AG Grid's quick filter in the grid; the same words over the same fields for cards
+  const q = search.trim().toLowerCase()
+  const found = filtered.filter(
+    (d) =>
+      !q ||
+      [d.id, d.reason, statusOf(d.status).label, d.stage ?? '', formatMoney(d.amount)]
+        .join(' ')
+        .toLowerCase()
+        .includes(q),
+  )
+  // The grid can narrow the rows further with its own column filters
+  const total = asTable && gridCount !== null ? gridCount : found.length
+  const size = pageSize || total || 1 // "All" = one page with every row
+  const pages = Math.max(1, Math.ceil(total / size))
   const current = Math.min(page, pages)
-  const shown = sorted.slice((current - 1) * size, current * size)
+  const shown = found.slice((current - 1) * size, current * size) // cards page here; the grid pages itself
+  const onPage = Math.max(0, Math.min(size, total - (current - 1) * size))
 
   const pickFilter = (f: 'all' | Group) => {
     setFilter(f)
-    setPage(1)
-  }
-  // First click on a column: newest / largest first (Reply by: soonest first); next click flips it.
-  const onSort = (key: SortKey) => {
-    setSort(sort?.key === key ? { key, desc: !sort.desc } : { key, desc: key !== 'due' })
     setPage(1)
   }
 
@@ -305,10 +238,23 @@ export default function DisputeList({ openId, asTable, onOpen }: Props) {
           })}
         </div>
         <div className="toolbar-right">
+          <label className="search">
+            <SearchIcon />
+            <span className="sr-only">Search disputes</span>
+            <input
+              type="search"
+              placeholder="Search"
+              value={search}
+              onChange={(e) => {
+                setSearch(e.target.value)
+                setPage(1)
+              }}
+            />
+          </label>
         </div>
       </div>
 
-      {shown.length === 0 ? (
+      {(asTable ? filtered.length === 0 : shown.length === 0) ? (
         <div className="notice empty-state">
           <p>{disputes.length === 0 ? EMPTY.all : reason ? 'No results.' : EMPTY[filter]}</p>
           {disputes.length > 0 && (
@@ -326,7 +272,19 @@ export default function DisputeList({ openId, asTable, onOpen }: Props) {
       ) : (
         <>
           {asTable ? (
-            <DisputeTable items={shown} openId={openId} onOpen={onOpen} sort={sort} onSort={onSort} />
+            <DisputeGrid
+              items={filtered}
+              search={search}
+              page={current}
+              pageSize={pageSize}
+              openId={openId}
+              onOpen={onOpen}
+              onCount={(n) => {
+                setGridCount(n)
+                setPage(1)
+              }}
+              onReady={onExport}
+            />
           ) : (
             <DisputeCards items={shown} openId={openId} onOpen={onOpen} />
           )}
@@ -334,8 +292,8 @@ export default function DisputeList({ openId, asTable, onOpen }: Props) {
             page={current}
             pages={pages}
             from={(current - 1) * size + 1}
-            to={(current - 1) * size + shown.length}
-            total={sorted.length}
+            to={(current - 1) * size + onPage}
+            total={total}
             all={disputes.length}
             onPage={setPage}
             pageSize={pageSize}

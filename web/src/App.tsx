@@ -4,6 +4,7 @@ import DisputeList from './DisputeList'
 import Splitter, { LIST_DEFAULT } from './Splitter'
 import ThemeToggle from './ThemeToggle'
 import ViewToggle from './ViewToggle'
+import { DownloadIcon } from './icons'
 import { useView, useNarrow } from './view'
 
 // Tiny hash router: "#/case/<id>" opens a case, anything else shows the list.
@@ -41,6 +42,9 @@ export default function App() {
   // A table needs room: phones, and a narrow list beside an open case, always get cards.
   const narrow = useNarrow()
   const tableFits = !narrow && (!openId || listWidth >= TABLE_MIN)
+  // The grid hands up its CSV export while it is on screen (wrapped: setState would call a bare function)
+  const [exportCsv, setExportCsv] = useState<(() => void) | null>(null)
+  const onExport = useCallback((fn: (() => void) | null) => setExportCsv(() => fn), [])
 
   useEffect(() => {
     const onHash = () => setOpenId(caseIdFromHash())
@@ -74,6 +78,11 @@ export default function App() {
         <img src="/favicon.svg?v=2" alt="" />
         <h1>Dispute Copilot</h1>
         <span className="tag">PayPal sandbox</span>
+        {exportCsv && (
+          <button className="icon-btn" onClick={exportCsv} aria-label="Export CSV" data-tip="Export CSV">
+            <DownloadIcon />
+          </button>
+        )}
         {tableFits && <ViewToggle view={view} onChange={setView} />}
         <ThemeToggle />
       </header>
@@ -93,6 +102,7 @@ export default function App() {
           <DisputeList
             openId={openId}
             asTable={tableFits && view === 'list'}
+            onExport={onExport}
             onOpen={(id) => (location.hash = `/case/${encodeURIComponent(id)}`)}
           />
         </section>

@@ -1785,3 +1785,69 @@ th[aria-sort] .th-sort {
 .chip.tone-warn.on .count { background: var(--warn); color: var(--bg); }
 .chip.tone-info.on .count { background: var(--accent); color: var(--bg); }
 .chip.tone-ok.on .count { background: var(--ok); color: var(--bg); }
+
+
+/* ── AG Grid: our table look on top of its Quartz theme ── */
+.grid-wrap {
+  overflow: hidden;
+}
+
+.grid-wrap .ag-header-cell-text {
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+}
+
+.grid-wrap .ag-header-cell.center .ag-header-cell-label {
+  justify-content: center;
+}
+
+.grid-wrap .ag-cell.center {
+  display: flex;
+  justify-content: center;
+}
+
+.grid-wrap .ag-cell.strong {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.grid-wrap .ag-cell.muted {
+  color: var(--muted);
+}
+
+.grid-wrap .ag-row.selected {
+  background: var(--surface-2);
+  box-shadow: inset 3px 0 0 var(--accent);
+}
+
+/* Search box in the toolbar (both views) */
+.search {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 10px;
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  color: var(--muted);
+}
+
+.search:focus-within {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.search input {
+  width: 160px;
+  border: none;
+  outline: none;
+  background: transparent;
+  font: inherit;
+  font-size: 13px;
+  color: var(--text);
+}
+
+.search input::placeholder {
+  color: var(--faint);
+}
