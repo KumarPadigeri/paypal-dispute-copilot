@@ -1,17 +1,14 @@
-import { useEffect, useMemo, useRef } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   CellStyleModule,
   ClientSideRowModelModule,
   CsvExportModule,
-  DateFilterModule,
   DragAndDropModule,
   GridStateModule,
   ModuleRegistry,
-  NumberFilterModule,
   PaginationModule,
   QuickFilterModule,
   RowApiModule,
-  RowSelectionModule,
   RowStyleModule,
   TextFilterModule,
   TooltipModule,
@@ -21,23 +18,21 @@ import {
   type GridApi,
   type GridState,
   type ICellRendererParams,
+  type IFilter,
 } from 'ag-grid-community'
-import { AgGridReact } from 'ag-grid-react'
+import { AgGridReact, type CustomFloatingFilterProps } from 'ag-grid-react'
 import Deadline from './Deadline'
 import StatusPill from './StatusPill'
 import { type DisputeSummary, formatAgo, formatDate, formatDateTime, formatMoney } from './api'
-import { statusOf } from './status'
+import { GROUPS, statusOf } from './status'
 
 // Only free (Community) features: sorting, resizable and draggable columns, column filters, quick
-// search, paging, row selection, tooltips, CSV export and a remembered layout. Validation (readable errors) in development only.
+// search, paging, tooltips, CSV export and a remembered layout. Validation (readable errors) in development only.
 ModuleRegistry.registerModules([
   ClientSideRowModelModule,
   PaginationModule,
   TextFilterModule,
-  NumberFilterModule,
-  DateFilterModule,
   QuickFilterModule,
-  RowSelectionModule,
   RowApiModule,
   GridStateModule,
   CsvExportModule,
@@ -96,15 +91,55 @@ const theme = themeQuartz.withParams({
 const time = (iso: string | null) => (iso ? new Date(iso) : null)
 const byTime = (a: Date | null, b: Date | null) =>
   (a ? a.getTime() : Number.MAX_SAFE_INTEGER) - (b ? b.getTime() : Number.MAX_SAFE_INTEGER)
-const onDate = (filterDate: Date, cell: Date | null) => {
-  if (!cell) return -1
-  const day = new Date(cell.getFullYear(), cell.getMonth(), cell.getDate()).getTime()
-  return day === filterDate.getTime() ? 0 : day < filterDate.getTime() ? -1 : 1
+
+// The filter row under the headers: type and it matches when the cell contains the text
+// (no "equals / starts with" menu). Amount and dates match on the text you see.
+const containsFilter = {
+  filter: 'agTextColumnFilter',
+  floatingFilter: true,
+  suppressHeaderFilterButton: true,
+  suppressFloatingFilterButton: true,
+  filterParams: { filterOptions: ['contains'], maxNumConditions: 1, trimInput: true, debounceMs: 150 },
+} as const
+
+// Status and Reason have a fixed list of values, so their filter is a dropdown. It drives AG Grid's
+// own text filter set to "equals" (built-in filters are always there, so a pick always applies).
+type TextModel = { filterType: 'text'; type: 'equals'; filter: string } | null
+function PickFloatingFilter(
+  props: CustomFloatingFilterProps<IFilter, DisputeSummary, unknown, TextModel> & { options: string[]; label: string },
+) {
+  return (
+    <select
+      className="grid-pick"
+      aria-label={`${props.label} filter`}
+      value={props.model?.filter ?? ''}
+      onChange={(e) =>
+        props.onModelChange(e.target.value ? { filterType: 'text', type: 'equals', filter: e.target.value } : null)
+      }
+    >
+      {/* blank until the seller picks a value; picking the blank again clears it */}
+      <option value="" />
+      {props.options.map((o) => (
+        <option key={o} value={o}>
+          {o}
+        </option>
+      ))}
+    </select>
+  )
 }
-const dateFilter = { filter: 'agDateColumnFilter', filterParams: { comparator: onDate } } as const
+const pickFilter = (label: string, options: string[]) => ({
+  filter: 'agTextColumnFilter',
+  filterParams: { filterOptions: ['equals'], maxNumConditions: 1 },
+  floatingFilter: true,
+  floatingFilterComponent: PickFloatingFilter,
+  floatingFilterComponentParams: { label, options },
+  suppressHeaderFilterButton: true,
+  suppressFloatingFilterButton: true,
+})
 
 type Props = {
-  items: DisputeSummary[] // every row that matches the chips and reason; the grid sorts, filters and pages them
+  items: DisputeSummary[] // every row that matches the chips; the grid sorts, filters and pages them
+  reasons: string[] // PayPal's fixed list, for the Reason dropdown
   search: string // the toolbar's search box, applied by AG Grid's quick filter
   page: number
   pageSize: number // 0 = all
@@ -114,8 +149,13 @@ type Props = {
   onReady: (exportCsv: () => void) => void
 }
 
-export default function DisputeGrid({ items, search, page, pageSize, openId, onOpen, onCount, onReady }: Props) {
+export default function DisputeGrid({ items, reasons, search, page, pageSize, openId, onOpen, onCount, onReady }: Props) {
   const api = useRef<GridApi<DisputeSummary> | null>(null)
+  const [visible, setVisible] = useState(items.length) // rows the column filters leave
+  const count = (n: number) => {
+    setVisible(n)
+    onCount(n)
+  }
 
   const columns = useMemo<ColDef<DisputeSummary>[]>(
     () => [
@@ -124,7 +164,7 @@ export default function DisputeGrid({ items, search, page, pageSize, openId, onO
         field: 'id',
         minWidth: 180,
         pinned: 'left', // stays in view when the table scrolls sideways
-        filter: 'agTextColumnFilter',
+        ...containsFilter,
         // Only the case id opens a case (a real button: works with mouse and keyboard)
         cellRenderer: (p: ICellRendererParams<DisputeSummary>) =>
           p.data && (
@@ -139,13 +179,14 @@ export default function DisputeGrid({ items, search, page, pageSize, openId, onO
           ),
         suppressKeyboardEvent: (p) => p.event.key === 'Enter', // let Enter press the button
       },
-      { headerName: 'Reason', field: 'reason', flex: 1, minWidth: 170, filter: 'agTextColumnFilter' },
+      { headerName: 'Reason', field: 'reason', flex: 1, minWidth: 170, ...pickFilter('Reason', reasons) },
       {
         headerName: 'Amount',
         colId: 'amount',
         valueGetter: (p) => Number(p.data?.amount?.value ?? 0),
         valueFormatter: (p) => formatMoney(p.data?.amount ?? null),
-        filter: 'agNumberColumnFilter',
+        filterValueGetter: (p) => formatMoney(p.data?.amount ?? null),
+        ...containsFilter,
         cellClass: 'center strong',
         headerClass: 'center',
         minWidth: 120,
@@ -155,7 +196,7 @@ export default function DisputeGrid({ items, search, page, pageSize, openId, onO
         colId: 'status',
         valueGetter: (p) => statusOf(p.data?.status ?? '').label,
         cellRenderer: (p: ICellRendererParams<DisputeSummary>) => p.data && <StatusPill status={p.data.status} />,
-        filter: 'agTextColumnFilter',
+        ...pickFilter('Status', Object.values(GROUPS).map((g) => g.label)),
         cellClass: 'center',
         headerClass: 'center',
         minWidth: 140,
@@ -169,7 +210,8 @@ export default function DisputeGrid({ items, search, page, pageSize, openId, onO
         cellRenderer: (p: ICellRendererParams<DisputeSummary>) =>
           p.value ? <Deadline iso={p.data?.respond_by} label="" /> : <span className="muted">—</span>,
         comparator: byTime,
-        ...dateFilter,
+        filterValueGetter: (p) => (p.data && statusOf(p.data.status).group === 'reply' ? formatDate(p.data.respond_by) : ''),
+        ...containsFilter,
         cellClass: 'center',
         headerClass: 'center',
         minWidth: 190,
@@ -178,7 +220,7 @@ export default function DisputeGrid({ items, search, page, pageSize, openId, onO
         headerName: 'Stage',
         colId: 'stage',
         valueGetter: (p) => p.data?.stage ?? '—',
-        filter: 'agTextColumnFilter',
+        ...containsFilter,
         cellClass: 'center',
         headerClass: 'center',
         minWidth: 110,
@@ -188,8 +230,9 @@ export default function DisputeGrid({ items, search, page, pageSize, openId, onO
         colId: 'created',
         valueGetter: (p) => time(p.data?.created ?? null),
         valueFormatter: (p) => formatDate(p.data?.created ?? null),
+        filterValueGetter: (p) => formatDate(p.data?.created ?? null),
         comparator: byTime,
-        ...dateFilter,
+        ...containsFilter,
         minWidth: 140,
       },
       {
@@ -198,13 +241,14 @@ export default function DisputeGrid({ items, search, page, pageSize, openId, onO
         valueGetter: (p) => time(p.data?.updated ?? null),
         valueFormatter: (p) => formatDateTime(p.data?.updated ?? null),
         tooltipValueGetter: (p) => formatAgo(p.data?.updated ?? null),
+        filterValueGetter: (p) => formatDateTime(p.data?.updated ?? null),
         comparator: byTime,
-        ...dateFilter,
+        ...containsFilter,
         cellClass: 'muted',
         minWidth: 170,
       },
     ],
-    [openId, onOpen],
+    [openId, onOpen, reasons],
   )
 
   // Our footer drives the paging, so card and grid views page the same way
@@ -218,11 +262,9 @@ export default function DisputeGrid({ items, search, page, pageSize, openId, onO
         theme={theme}
         rowData={items}
         columnDefs={columns}
-        defaultColDef={{ sortable: true, resizable: true, unSortIcon: true, flex: 1 }}
+        defaultColDef={{ sortable: true, resizable: true, flex: 1 }}
         getRowId={(p) => p.data.id}
         rowClassRules={{ selected: (p) => p.data?.id === openId }}
-        rowSelection={{ mode: 'multiRow', checkboxes: true, headerCheckbox: true, enableClickSelection: false }}
-        selectionColumnDef={{ pinned: 'left', width: 48, minWidth: 48, maxWidth: 48 }}
         quickFilterText={search}
         initialState={savedLayout()}
         onStateUpdated={(e) => saveLayout(e.state)}
@@ -232,17 +274,20 @@ export default function DisputeGrid({ items, search, page, pageSize, openId, onO
         suppressPaginationPanel
         suppressCellFocus={false}
         tooltipShowDelay={300}
-        overlayNoRowsTemplate="<span>No disputes match.</span>"
+        suppressNoRowsOverlay
         onGridReady={(e) => {
           api.current = e.api
-          // Picked rows only when some are ticked; otherwise every row the filters leave
-          onReady(() =>
-            e.api.exportDataAsCsv({ fileName: 'disputes.csv', onlySelected: e.api.getSelectedRows().length > 0 }),
-          )
+          // Exactly what's on screen: every row the chips, search and column filters leave
+          onReady(() => e.api.exportDataAsCsv({ fileName: 'disputes.csv' }))
         }}
-        onFilterChanged={(e) => onCount(e.api.getDisplayedRowCount())}
-        onRowDataUpdated={(e) => onCount(e.api.getDisplayedRowCount())}
+        onFilterChanged={(e) => count(e.api.getDisplayedRowCount())}
+        onRowDataUpdated={(e) => count(e.api.getDisplayedRowCount())}
       />
+      {visible === 0 && (
+        <p className="grid-empty" role="status">
+          No disputes match these filters.
+        </p>
+      )}
     </div>
   )
 }

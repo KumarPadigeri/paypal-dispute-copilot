@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import {
   type DisputeSummary,
   formatDate,
@@ -7,6 +7,8 @@ import {
   listReasons,
 } from './api'
 import Deadline from './Deadline'
+import { downloadCsv } from './csv'
+import Dashboard from './Dashboard'
 import DisputeGrid from './DisputeGrid'
 import { SearchIcon } from './icons'
 import { ListSkeleton } from './Skeleton'
@@ -99,7 +101,9 @@ function Footer({ page, pages, from, to, total, all, onPage, pageSize, onPageSiz
     <div className="list-footer">
       <span aria-live="polite">
         {/* A range only when rows are on other pages; the overall total only when a filter hides some */}
-        {from === 1 && to === total
+        {total === 0
+          ? `Showing 0 of ${all}`
+          : from === 1 && to === total
           ? total === all
             ? `Showing all ${all}`
             : `Showing ${total} of ${all}`
@@ -146,7 +150,6 @@ export default function DisputeList({ openId, asTable, onOpen, onExport }: Props
   const [disputes, setDisputes] = useState<DisputeSummary[] | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [filter, setFilter] = useState<'all' | Group>('all')
-  const [reason, setReason] = useState('')
   const [search, setSearch] = useState('')
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = usePageSize()
@@ -154,14 +157,15 @@ export default function DisputeList({ openId, asTable, onOpen, onExport }: Props
   const [allReasons, setAllReasons] = useState<string[]>([])
   const [gridCount, setGridCount] = useState<number | null>(null) // rows left after the grid's column filters
 
-  // Export only exists while the grid is on screen
+  // Export: the grid hands up AG Grid's own export; cards export what the chips and search leave
+  const cardRows = useRef<DisputeSummary[]>([])
   useEffect(() => {
-    if (!asTable) onExport(null)
+    if (!asTable) onExport(() => downloadCsv(cardRows.current))
   }, [asTable, onExport])
 
   useEffect(() => {
     listDisputes().then((list) => setDisputes([...list].sort(needsReplyFirst)), (e: Error) => setError(e.message))
-    listReasons().then(setAllReasons, () => setAllReasons([])) // the dropdown still works from the cases
+    listReasons().then(setAllReasons, () => setAllReasons([])) // the grid's reason dropdown still works from the cases
   }, [])
 
   if (error) return <div className="notice error">Could not load disputes from PayPal ({error}).</div>
@@ -169,8 +173,7 @@ export default function DisputeList({ openId, asTable, onOpen, onExport }: Props
 
   // PayPal's full reason list (in PayPal's order), plus any reason a case has that the list lacks.
   const reasons = [...new Set([...allReasons, ...disputes.map((d) => d.reason)])]
-  const reasonCount = (r: string) => disputes.filter((d) => d.reason === r).length
-  const filtered = disputes.filter((d) => matches(filter, d) && (!reason || d.reason === reason))
+  const filtered = disputes.filter((d) => matches(filter, d))
   // Search: AG Grid's quick filter in the grid; the same words over the same fields for cards
   const q = search.trim().toLowerCase()
   const found = filtered.filter(
@@ -187,6 +190,7 @@ export default function DisputeList({ openId, asTable, onOpen, onExport }: Props
   const pages = Math.max(1, Math.ceil(total / size))
   const current = Math.min(page, pages)
   const shown = found.slice((current - 1) * size, current * size) // cards page here; the grid pages itself
+  cardRows.current = found
   const onPage = Math.max(0, Math.min(size, total - (current - 1) * size))
 
   const pickFilter = (f: 'all' | Group) => {
@@ -196,29 +200,15 @@ export default function DisputeList({ openId, asTable, onOpen, onExport }: Props
 
   return (
     <>
-      <div className="toolbar">
-        <div className="toolbar-left">
-          {reasons.length > 1 && (
-            <label className="select-label">
-              <span className="sr-only">Reason</span>
-              <select
-                className="select"
-                value={reason}
-                onChange={(e) => {
-                  setReason(e.target.value)
-                  setPage(1)
-                }}
-              >
-                <option value="">All reasons ({disputes.length})</option>
-                {reasons.map((r) => (
-                  <option key={r} value={r} disabled={reasonCount(r) === 0}>
-                    {r} ({reasonCount(r)})
-                  </option>
-                ))}
-              </select>
-            </label>
-          )}
-        </div>
+      {!openId && (
+        <Dashboard
+          disputes={disputes}
+          filter={filter}
+          onFilter={pickFilter}
+        />
+      )}
+      {/* Status chips, then a full-width search under them */}
+      <div className="filters">
         <div className="chips" role="group" aria-label="Filter by status">
           {FILTERS.map((g) => {
             const group = GROUPS[g]
@@ -237,32 +227,30 @@ export default function DisputeList({ openId, asTable, onOpen, onExport }: Props
             )
           })}
         </div>
-        <div className="toolbar-right">
-          <label className="search">
-            <SearchIcon />
-            <span className="sr-only">Search disputes</span>
-            <input
-              type="search"
-              placeholder="Search"
-              value={search}
-              onChange={(e) => {
-                setSearch(e.target.value)
-                setPage(1)
-              }}
-            />
-          </label>
-        </div>
+        <label className="search">
+          <SearchIcon />
+          <span className="sr-only">Search disputes</span>
+          <input
+            type="search"
+            placeholder="Search by case, reason, status or amount"
+            value={search}
+            onChange={(e) => {
+              setSearch(e.target.value)
+              setPage(1)
+            }}
+          />
+        </label>
       </div>
 
       {(asTable ? filtered.length === 0 : shown.length === 0) ? (
         <div className="notice empty-state">
-          <p>{disputes.length === 0 ? EMPTY.all : reason ? 'No results.' : EMPTY[filter]}</p>
+          <p>{disputes.length === 0 ? EMPTY.all : q ? 'No results.' : EMPTY[filter]}</p>
           {disputes.length > 0 && (
             <button
               className="link"
               onClick={() => {
                 pickFilter('all')
-                setReason('')
+                setSearch('')
               }}
             >
               Show all disputes
@@ -274,6 +262,7 @@ export default function DisputeList({ openId, asTable, onOpen, onExport }: Props
           {asTable ? (
             <DisputeGrid
               items={filtered}
+              reasons={reasons}
               search={search}
               page={current}
               pageSize={pageSize}

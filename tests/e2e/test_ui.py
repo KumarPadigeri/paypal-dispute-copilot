@@ -333,3 +333,35 @@ def test_grid_sorts_searches_and_exports(page: Page):
     lines = Path(download.value.path()).read_text(encoding="utf-8-sig").splitlines()
     assert lines[0].startswith('"Case","Reason","Amount","Status"')
     assert len(lines) == 3  # header + both disputes
+
+
+def test_grid_filter_row_contains_text_and_dropdowns(page: Page):
+    page.add_init_script(LIST_VIEW)
+    page.goto("/")
+    footer = page.locator(".list-footer")
+    expect(footer).to_contain_text("Showing all 2")
+    # Type in the Case filter: matches when the id contains the text
+    page.locator(".ag-floating-filter[aria-colindex] input").first.fill("FOD")
+    expect(footer).to_contain_text("Showing 1 of 2")
+    page.locator(".ag-floating-filter[aria-colindex] input").first.fill("")
+    expect(footer).to_contain_text("Showing all 2")
+    # Status and Reason are dropdowns of their fixed values
+    page.get_by_label("Status filter").select_option("Resolved")
+    expect(page.locator(".grid-empty")).to_have_text("No disputes match these filters.")
+    expect(footer).to_contain_text("Showing 0 of 2")
+    page.get_by_label("Status filter").select_option("")
+    page.get_by_label("Reason filter").select_option("Item not received")
+    expect(footer).to_contain_text("Showing all 2")
+    # No sort arrows, but a header click still sorts
+    expect(page.locator(".ag-sort-indicator-icon:visible")).to_have_count(0)
+
+
+def test_card_view_exports_what_it_shows(page: Page):
+    page.goto("/")
+    expect(page.locator(".list .row")).to_have_count(2)
+    page.fill(".search input", "FOD")
+    with page.expect_download() as download:
+        page.get_by_role("button", name="Export CSV").click()
+    lines = Path(download.value.path()).read_text(encoding="utf-8-sig").splitlines()
+    assert lines[0].startswith('"Case","Reason","Amount","Status"')
+    assert len(lines) == 2 and "PP-R-FOD-10194708" in lines[1]

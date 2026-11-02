@@ -1803,6 +1803,7 @@ th[aria-sort] .th-sort {
 
 .grid-wrap .ag-cell.center {
   display: flex;
+  align-items: center; /* pills and the deadline keep their own height instead of filling the row */
   justify-content: center;
 }
 
@@ -1850,4 +1851,157 @@ th[aria-sort] .th-sort {
 
 .search input::placeholder {
   color: var(--faint);
+}
+
+/* Summary dashboard: three number tiles and two small AG Charts, above the filters */
+.dashboard {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(120px, 0.6fr)) minmax(180px, 1fr) minmax(240px, 1.6fr);
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.dashboard .tile,
+.dashboard .chart {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding: 12px 14px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  min-width: 0;
+}
+
+.tile-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+}
+
+.tile-value {
+  font-size: 26px;
+  font-weight: 650;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+}
+
+.tile-value.small {
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: 0;
+}
+
+.tile-value.warn { color: var(--warn); }
+.tile-value.bad { color: var(--bad); }
+
+.dashboard .chart > div,
+.dashboard .chart > div > div {
+  height: 118px;
+}
+
+.dashboard .chart {
+  padding: 8px 8px 6px;
+}
+
+/* Narrower screens: the tiles stay, the charts go (the chips and reason filter do the same job) */
+@media (max-width: 1100px) {
+  .dashboard {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .dashboard .chart {
+    display: none;
+  }
+}
+
+@media (max-width: 480px) {
+  .dashboard {
+    gap: 8px;
+  }
+
+  .tile-value {
+    font-size: 20px;
+  }
+}
+
+/* Search on its own full-width line, status chips under it */
+.filters {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.filters .search {
+  width: 100%;
+  height: 38px;
+}
+
+.filters .search input {
+  flex: 1;
+  width: auto;
+  font-size: 14px;
+}
+
+.filters .chips {
+  margin-bottom: 0;
+  justify-content: center;
+}
+
+/* Dropdown filters in the grid's filter row */
+/* Filter row: each filter is a quiet underline, not a box; focus thickens it in the accent color */
+.grid-wrap .ag-floating-filter-input .ag-input-field-input,
+.grid-pick {
+  width: 100%;
+  height: 28px;
+  padding: 0 2px;
+  font: inherit;
+  font-size: 13px;
+  color: var(--text);
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid var(--border-strong);
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.grid-wrap .ag-floating-filter-input .ag-input-field-input:focus,
+.grid-pick:focus {
+  outline: none;
+  box-shadow: none;
+  border-bottom: 2px solid var(--accent);
+}
+
+.grid-wrap .ag-floating-filter-input .ag-input-field-input::placeholder {
+  color: var(--faint);
+}
+
+/* No sort arrows in the headers: clicking still sorts, and aria-sort tells screen readers the order */
+.grid-wrap .ag-sort-indicator-container {
+  display: none;
+}
+
+.grid-empty {
+  margin: 0;
+  padding: 18px 16px;
+  color: var(--muted);
+  font-size: 14px;
+  text-align: center;
+}
+
+/* AG Grid sets each cell's line-height to the row height; pills and deadlines keep their own */
+.grid-wrap .pill,
+.grid-wrap .due {
+  line-height: 1.4;
+}
+
+/* A chart's canvas never spills over the filters below it */
+.dashboard .chart {
+  overflow: hidden;
 }

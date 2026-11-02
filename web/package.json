@@ -11,6 +11,8 @@
   },
   "dependencies": {
     "@fontsource/inter": "5.1.0",
+    "ag-charts-community": "11.3.2",
+    "ag-charts-react": "11.3.2",
     "ag-grid-community": "33.3.2",
     "ag-grid-react": "33.3.2",
     "react": "^19.1.0",
