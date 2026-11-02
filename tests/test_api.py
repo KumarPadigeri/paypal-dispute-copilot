@@ -1,7 +1,6 @@
 import json
 from pathlib import Path
 
-import httpx
 from fastapi.testclient import TestClient
 
 from copilot.api import create_app
@@ -23,10 +22,7 @@ class FakePayPal:
 
     def get_dispute(self, dispute_id):
         if dispute_id != DISPUTE["dispute_id"]:
-            request = httpx.Request("GET", "https://sandbox.test")
-            raise httpx.HTTPStatusError(
-                "404", request=request, response=httpx.Response(404, request=request)
-            )
+            raise LookupError("Not found in PayPal")  # what the real client raises on a 404
         return DISPUTE
 
     def list_trackers(self, txn):

@@ -1,12 +1,37 @@
-"""Small PayPal REST client for the sandbox."""
+"""PayPal sandbox client: reads go through PayPal's Agent Toolkit; actions use REST directly.
+
+The toolkit covers listing and reading disputes and reading shipment tracking. Sending evidence,
+making an offer, accepting a claim (with REFUND) and adding tracking with a ship date are not in
+it, or not in the shape we need, so those stay as plain REST calls below.
+"""
 
 import json
+import time
 
 import httpx
+import requests
+from paypal_agent_toolkit.shared.configuration import Context
+from paypal_agent_toolkit.shared.disputes.tool_handlers import get_dispute, list_disputes
+from paypal_agent_toolkit.shared.paypal_client import PayPalClient as ToolkitClient
+from paypal_agent_toolkit.shared.tracking.tool_handlers import get_shipment_tracking
+from pydantic import ValidationError
 
 from copilot.settings import setting
 
 SANDBOX_URL = "https://api-m.sandbox.paypal.com"
+
+
+class _Toolkit(ToolkitClient):
+    """The toolkit's client, sandbox only, reusing one token instead of fetching one per call."""
+
+    def __init__(self, client_id: str, secret: str):
+        super().__init__(client_id, secret, Context(sandbox=True, source="DISPUTE-COPILOT"))
+        self._token: str | None = None
+
+    def get_access_token(self) -> str:
+        if self._token is None:
+            self._token = super().get_access_token()
+        return self._token
 
 
 class PayPalClient:
@@ -17,6 +42,23 @@ class PayPalClient:
         self._base_url = base_url
         self._http = httpx.Client(base_url=base_url, timeout=30)
         self._token: str | None = None
+        self._toolkit = _Toolkit(client_id, secret)
+
+    def _read(self, handler, params: dict) -> dict:
+        """One toolkit read. A bad or unknown id is LookupError; a sandbox 503 gets one retry."""
+        for attempt in range(2):
+            try:
+                return json.loads(handler(self._toolkit, params))
+            except ValidationError as e:
+                raise LookupError("Not a PayPal id") from e
+            except requests.HTTPError as e:
+                status = e.response.status_code if e.response is not None else 0
+                if status == 404:
+                    raise LookupError("Not found in PayPal") from e
+                if status < 500 or attempt == 1:
+                    raise
+                time.sleep(0.5)
+        raise AssertionError("unreachable")
 
     @classmethod
     def from_env(cls) -> "PayPalClient":
@@ -37,20 +79,11 @@ class PayPalClient:
             self._token = resp.json()["access_token"]
         return {"Authorization": f"Bearer {self._token}"}
 
-    def _get(self, path: str, params: dict | None = None) -> dict:
-        # The sandbox sometimes answers 503 once; one retry is enough.
-        for attempt in range(2):
-            resp = self._http.get(path, params=params, headers=self._headers())
-            if resp.status_code < 500 or attempt == 1:
-                break
-        resp.raise_for_status()
-        return resp.json()
-
     def list_disputes(self) -> list[dict]:
-        return self._get("/v1/customer/disputes").get("items", [])
+        return self._read(list_disputes, {"page_size": 50}).get("items", [])
 
     def get_dispute(self, dispute_id: str) -> dict:
-        return self._get(f"/v1/customer/disputes/{dispute_id}")
+        return self._read(get_dispute, {"dispute_id": dispute_id})
 
     def provide_evidence(self, dispute_id: str, evidences: list[dict]) -> dict:
         resp = self._http.post(
@@ -94,9 +127,8 @@ class PayPalClient:
         return resp.json()
 
     def list_trackers(self, transaction_id: str) -> list[dict]:
-        return self._get("/v1/shipping/trackers", {"transaction_id": transaction_id}).get(
-            "trackers", []
-        )
+        found = self._read(get_shipment_tracking, {"transaction_id": transaction_id})
+        return found.get("trackers", [])
 
     def add_tracking(
         self, transaction_id: str, tracking_number: str, carrier: str, shipment_date: str

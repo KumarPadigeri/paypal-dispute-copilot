@@ -13,7 +13,6 @@ from pathlib import Path
 from fastapi import FastAPI, Header, HTTPException, Request
 from fastapi.responses import StreamingResponse
 from fastapi.staticfiles import StaticFiles
-from httpx import HTTPStatusError
 from pydantic import BaseModel
 
 from copilot.advice import advise, available
@@ -85,10 +84,8 @@ def create_app(
     def load_case(request: Request, dispute_id: str):
         try:
             return gather_case(pp(request), dispute_id)
-        except HTTPStatusError as e:
-            if e.response.status_code == 404:
-                raise HTTPException(404, "Dispute not found") from e
-            raise
+        except LookupError as e:
+            raise HTTPException(404, "Dispute not found") from e
 
     @app.get("/api/health")
     def health() -> dict:

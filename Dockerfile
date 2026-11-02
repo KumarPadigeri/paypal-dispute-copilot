@@ -10,8 +10,9 @@ RUN npm run build
 FROM python:3.11-slim
 WORKDIR /app
 ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+COPY requirements.txt requirements-toolkit.txt ./
+RUN pip install --no-cache-dir -r requirements.txt \
+ && pip install --no-cache-dir --no-deps -r requirements-toolkit.txt
 COPY copilot ./copilot
 COPY --from=web /web/dist ./web/dist
 RUN useradd --create-home app

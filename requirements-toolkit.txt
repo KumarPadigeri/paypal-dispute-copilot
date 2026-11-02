@@ -1,0 +1,4 @@
+# PayPal's Agent Toolkit, installed with --no-deps: we use only its framework-free dispute and
+# tracking handlers (they need just requests + pydantic, both in requirements.txt). Its declared
+# extras (LangChain, CrewAI, OpenAI Agents) would add hundreds of MB we never import.
+paypal-agent-toolkit==1.11.0
