@@ -2,9 +2,9 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import type { AgChartOptions } from 'ag-charts-community'
 import { AgCharts } from 'ag-charts-react'
 import Dashboard from './Dashboard'
+import { ArrowLeftIcon } from './icons'
 import { type DisputeSummary, formatMoney, listDisputes } from './api'
-import { dueOf } from './due'
-import { statusOf } from './status'
+import { BUCKETS, bucketOf, drillHref } from './drill'
 
 /** Canvas charts can't read CSS variables, so read the theme's colors and redo them when it flips. */
 function useThemeColors() {
@@ -47,17 +47,9 @@ const axes = (c: Colors, numberLabel?: (v: number) => string) => [
 ]
 
 /** A chart in a card: one image for screen readers, labelled with the same numbers it draws. */
-function ChartCard({
-  title,
-  summary,
-  options,
-  legend,
-}: {
-  title: string
-  summary: string
-  options: AgChartOptions
-  legend?: { label: string; value: string; color: string }[]
-}) {
+type Link = { label: string; value: string; href: string; color?: string }
+
+function ChartCard({ title, summary, options, links }: { title: string; summary: string; options: AgChartOptions; links: Link[] }) {
   const box = useRef<HTMLDivElement>(null)
   // nothing inside the hidden canvas may take keyboard focus
   useEffect(() => {
@@ -79,12 +71,15 @@ function ChartCard({
           <AgCharts options={options} />
         </div>
       </div>
-      {legend && (
-        <ul className="insight-legend">
-          {legend.map((l) => (
-            <li key={l.label}>
-              <span className="dot" style={{ background: l.color }} aria-hidden="true" />
-              {l.label} <strong>{l.value}</strong>
+      {/* Clicking a bar opens those disputes; these links do the same by keyboard */}
+      {links.length > 0 && (
+        <ul className="insight-links" aria-label={`Open disputes: ${title.toLowerCase()}`}>
+          {links.map((l) => (
+            <li key={l.href}>
+              <a href={l.href}>
+                {l.color && <span className="dot" style={{ background: l.color }} aria-hidden="true" />}
+                {l.label} <strong>{l.value}</strong>
+              </a>
             </li>
           ))}
         </ul>
@@ -115,22 +110,7 @@ export default function Insights() {
     const toneFill = (t: string) => colors.tone[t as keyof Colors['tone']] ?? colors.tone.info
 
     // 1. What could I lose, and by when? Open disputes' money, by how soon I must reply.
-    const buckets = [
-      { key: 'overdue', label: 'Overdue', tone: 'bad' },
-      { key: 'soon', label: 'Due in 2 days', tone: 'bad' },
-      { key: 'week', label: 'Due this week', tone: 'warn' },
-      { key: 'later', label: 'Due later', tone: 'info' },
-      { key: 'waiting', label: 'Waiting on buyer or PayPal', tone: 'muted' },
-    ].map((b) => ({ ...b, amount: 0, count: 0 }))
-    const bucketOf = (d: DisputeSummary) => {
-      const group = statusOf(d.status).group
-      if (group === 'waiting') return 'waiting'
-      if (group !== 'reply') return null // resolved: nothing at stake
-      const due = dueOf(d.respond_by)
-      if (!due) return 'later'
-      const days = due.msLeft / 86_400_000
-      return days <= 0 ? 'overdue' : days <= 2 ? 'soon' : days <= 7 ? 'week' : 'later'
-    }
+    const buckets = BUCKETS.map((b) => ({ ...b, amount: 0, count: 0 }))
     for (const d of disputes) {
       const b = buckets.find((x) => x.key === bucketOf(d))
       if (b) {
@@ -147,6 +127,8 @@ export default function Insights() {
         return { reason: r, amount: of.reduce((s, d) => s + amount(d), 0), count: of.length }
       })
       .sort((a, b) => b.amount - a.amount)
+
+    const go = (href: string) => () => (location.hash = href.slice(1))
 
     const cases = (n: number) => (n === 1 ? '1 case' : `${n} cases`)
     const moneyTip = (label: string) => ({
@@ -178,12 +160,15 @@ export default function Insights() {
               yName: 'Amount',
               cornerRadius: 3,
               itemStyler: (p: { datum: { tone: string } }) => ({ fill: toneFill(p.datum.tone) }),
+              cursor: 'pointer',
+              listeners: { nodeClick: (e: { datum: { key: string } }) => go(drillHref('due', e.datum.key))() },
               label: { formatter: (p: { datum: { amount: number; count: number } }) => `${money(p.datum.amount)} · ${cases(p.datum.count)}`, placement: 'outside-end', color: colors.text },
               tooltip: moneyTip('At stake'),
             },
           ],
           axes: axes(colors, money),
         } as AgChartOptions,
+        links: atStake.map((b) => ({ label: b.label, value: `${money(b.amount)} · ${cases(b.count)}`, href: drillHref('due', b.key), color: toneFill(b.tone) })),
       },
       {
         title: currency ? 'Money by dispute reason' : 'By dispute reason (mixed currencies)',
@@ -201,12 +186,15 @@ export default function Insights() {
               yName: 'Amount',
               fill: colors.tone.info,
               cornerRadius: 3,
+              cursor: 'pointer',
+              listeners: { nodeClick: (e: { datum: { reason: string } }) => go(drillHref('reason', e.datum.reason))() },
               label: { formatter: (p: { datum: { amount: number; count: number } }) => `${money(p.datum.amount)} · ${cases(p.datum.count)}`, placement: 'outside-end', color: colors.text },
               tooltip: moneyTip('Reason'),
             },
           ],
           axes: axes(colors, money),
         } as AgChartOptions,
+        links: byReason.map((r) => ({ label: r.reason, value: `${money(r.amount)} · ${cases(r.count)}`, href: drillHref('reason', r.reason) })),
       },
     ]
   }, [disputes, colors])
@@ -214,12 +202,13 @@ export default function Insights() {
   return (
     <section className="insights" aria-labelledby="insights-title">
       <div className="insights-head">
+        <a className="back-link" href="#">
+          <ArrowLeftIcon />
+          Back to disputes
+        </a>
         <h2 id="insights-title" ref={heading} tabIndex={-1}>
           Insights
         </h2>
-        <a className="link" href="#">
-          Back to disputes
-        </a>
       </div>
       {error && <div className="notice error">Could not load disputes from PayPal ({error}).</div>}
       {disputes && <Dashboard disputes={disputes} />}

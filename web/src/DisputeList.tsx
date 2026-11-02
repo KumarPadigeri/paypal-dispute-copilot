@@ -8,6 +8,7 @@ import {
 } from './api'
 import Deadline from './Deadline'
 import { downloadCsv } from './csv'
+import { type Drill, drillFromHash, drillLabel, drillMatches } from './drill'
 import Dashboard from './Dashboard'
 import { CloseIcon, SearchIcon } from './icons'
 import { ListSkeleton } from './Skeleton'
@@ -152,12 +153,27 @@ export default function DisputeList({ openId, asTable, onOpen, onExport }: Props
   const [disputes, setDisputes] = useState<DisputeSummary[] | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [picked, setPicked] = useState<Group[]>([]) // status chips that are on
+  // A drill-down from Insights ("#/?reason=…"), kept while cases open and close; removed by its ✕
+  const [drill, setDrill] = useState<Drill | null>(() => drillFromHash())
   const [search, setSearch] = useState('')
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = usePageSize()
 
   const [allReasons, setAllReasons] = useState<string[]>([])
   const [gridCount, setGridCount] = useState<number | null>(null) // rows left after the grid's column filters
+
+  useEffect(() => {
+    const onHash = () => {
+      const next = drillFromHash()
+      if (!next) return
+      setDrill(next)
+      setPicked([]) // a fresh drill-down starts from just that filter
+      setSearch('')
+      setPage(1)
+    }
+    window.addEventListener('hashchange', onHash)
+    return () => window.removeEventListener('hashchange', onHash)
+  }, [])
 
   // Export: the grid hands up AG Grid's own export; cards export what the chips and search leave
   const cardRows = useRef<DisputeSummary[]>([])
@@ -175,7 +191,7 @@ export default function DisputeList({ openId, asTable, onOpen, onExport }: Props
 
   // PayPal's full reason list (in PayPal's order), plus any reason a case has that the list lacks.
   const reasons = [...new Set([...allReasons, ...disputes.map((d) => d.reason)])]
-  const filtered = disputes.filter((d) => matches(picked, d))
+  const filtered = disputes.filter((d) => matches(picked, d) && (!drill || drillMatches(drill, d)))
   // Search: AG Grid's quick filter in the grid; the same words over the same fields for cards
   const q = search.trim().toLowerCase()
   const found = filtered.filter(
@@ -251,6 +267,25 @@ export default function DisputeList({ openId, asTable, onOpen, onExport }: Props
             </button>
           )}
         </label>
+        {drill && (
+          <p className="drill-tag">
+            <span>
+              From Insights: <strong>{drillLabel(drill)}</strong>
+            </span>
+            <button
+              type="button"
+              className="search-clear"
+              aria-label={`Remove filter ${drillLabel(drill)}`}
+              onClick={() => {
+                setDrill(null)
+                setPage(1)
+                if (drillFromHash()) location.hash = ''
+              }}
+            >
+              <CloseIcon />
+            </button>
+          </p>
+        )}
       </div>
 
       {(asTable ? filtered.length === 0 : shown.length === 0) ? (
@@ -269,6 +304,7 @@ export default function DisputeList({ openId, asTable, onOpen, onExport }: Props
               onClick={() => {
                 setPicked([])
                 setSearch('')
+                setDrill(null)
               }}
             >
               Show all disputes

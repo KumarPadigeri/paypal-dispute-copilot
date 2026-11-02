@@ -52,6 +52,12 @@ export const ListIcon = () => (
   </svg>
 )
 
+export const ArrowLeftIcon = () => (
+  <svg {...base}>
+    <path d="M13 8H3.5M7.5 4 3.5 8l4 4" />
+  </svg>
+)
+
 export const ChartIcon = () => (
   <svg {...base}>
     <path d="M2.5 13.5h11M4.5 11V7.5M8 11V4M11.5 11V6" />

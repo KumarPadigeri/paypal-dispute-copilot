@@ -449,7 +449,7 @@ def test_insights_answer_what_is_at_stake_and_why(page: Page):
     page.get_by_role("link", name="Insights").click()
     expect(page.get_by_role("heading", name="Insights")).to_be_focused()
     charts = page.locator(".insight-chart[role=img]")
-    expect(charts).to_have_count(2)
+    expect(charts).to_have_count(2)  # what's at stake by when, and why
     # Both fixture disputes need a reply (Nov 16) and are "Item not received"
     expect(charts.nth(0)).to_have_attribute(
         "aria-label", re.compile(r"^Money at stake, by reply deadline: ")
@@ -469,3 +469,25 @@ def test_skip_link_moves_focus_without_leaving_the_page(page: Page):
     page.keyboard.press("Enter")
     expect(page.locator("main#main")).to_be_focused()
     assert page.evaluate("location.hash") == "#/insights"
+
+
+def test_insights_link_opens_the_inbox_filtered_and_the_tag_removes_it(page: Page):
+    def one_waiting(route):
+        r = route.fetch()
+        items = r.json()
+        items[1]["status"] = "WAITING_FOR_BUYER_RESPONSE"
+        route.fulfill(response=r, json=items)
+
+    page.route("**/api/disputes", one_waiting)
+    page.goto("/#/insights")
+    page.get_by_role("link", name=re.compile("^Waiting on buyer or PayPal")).click()
+    footer = page.locator(".list-footer")
+    expect(page.locator(".drill-tag")).to_contain_text("Waiting on buyer or PayPal")
+    expect(footer).to_contain_text("Showing 1 of 2")
+    # kept while a case opens and closes
+    page.locator("button[data-open]").first.click()
+    page.keyboard.press("Escape")
+    expect(footer).to_contain_text("Showing 1 of 2")
+    page.get_by_role("button", name="Remove filter Waiting on buyer or PayPal").click()
+    expect(page.locator(".drill-tag")).to_have_count(0)
+    expect(footer).to_contain_text("Showing all 2")
