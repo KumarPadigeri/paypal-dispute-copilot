@@ -5,7 +5,7 @@ from pathlib import Path
 import pytest
 
 from copilot.evidence import build_case
-from copilot.submit import NotSendable, build_evidences
+from copilot.submit import NotSendable, build_evidences, check_message
 
 FIXTURES = Path(__file__).parent / "fixtures"
 REPLY = "The item was shipped via USPS on Oct 27, 2026. Please close the case."
@@ -52,3 +52,20 @@ def test_unknown_carrier_is_sent_as_other():
 def test_nothing_is_sent_when_a_check_fails(change, reply, message):
     with pytest.raises(NotSendable, match=message):
         build_evidences(replace(case(), **change), reply)
+
+
+@pytest.mark.parametrize(
+    "change, text, message",
+    [
+        ({"actions": ["provide_evidence"]}, REPLY, "does not allow messaging"),
+        ({}, "  ", "message is empty"),
+        ({}, "x" * 2001, "PayPal allows 2000"),
+    ],
+)
+def test_message_is_not_sent_when_a_check_fails(change, text, message):
+    with pytest.raises(NotSendable, match=message):
+        check_message(replace(case(), **change), text)
+
+
+def test_message_needs_no_tracking():
+    check_message(replace(case(), shipments=[]), REPLY)  # no error

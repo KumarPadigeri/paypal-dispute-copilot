@@ -27,6 +27,16 @@ def check_sendable(case: DisputeCase, reply: str) -> None:
         raise NotSendable(f"The reply is {len(reply)} characters; PayPal allows {NOTES_MAX}")
 
 
+def check_message(case: DisputeCase, message: str) -> None:
+    """A message to the buyer: PayPal must allow it, and it must fit."""
+    if "send_message" not in case.actions:
+        raise NotSendable("PayPal does not allow messaging the buyer on this case right now")
+    if not message.strip():
+        raise NotSendable("The message is empty: every sentence was removed as unproven")
+    if len(message) > NOTES_MAX:
+        raise NotSendable(f"The message is {len(message)} characters; PayPal allows {NOTES_MAX}")
+
+
 def build_evidences(case: DisputeCase, reply: str) -> list[dict]:
     check_sendable(case, reply)
     if case.shipments:

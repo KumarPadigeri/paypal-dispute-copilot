@@ -1,0 +1,104 @@
+{
+ "recorded": "2026-11-04T17:16:03+00:00",
+ "events": [
+  {
+   "t": 0.0,
+   "name": "writing",
+   "data": {
+    "round": 1
+   }
+  },
+  {
+   "t": 3.76,
+   "name": "draft",
+   "data": {
+    "round": 1,
+    "sentences": [
+     {
+      "text": "Your order was shipped via USPS with tracking number 9400111899561234567890, and PayPal's tracking status shows SHIPPED.",
+      "cites": [
+       "E4"
+      ],
+      "answers": [
+       "C2"
+      ]
+     },
+     {
+      "text": "The order was for 1 Ceramic Pour-Over Coffee Set, and PayPal records show the payment of 49.99 USD and the shipment on Oct 27, 2026.",
+      "cites": [
+       "E1",
+       "E2",
+       "E4",
+       "E6"
+      ],
+      "answers": [
+       "C1"
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "t": 3.76,
+   "name": "verifying",
+   "data": {
+    "round": 1
+   }
+  },
+  {
+   "t": 5.3,
+   "name": "verdicts",
+   "data": {
+    "round": 1,
+    "verdicts": [
+     {
+      "sentence": "Your order was shipped via USPS with tracking number 9400111899561234567890, and PayPal's tracking status shows SHIPPED.",
+      "supported": true,
+      "reason": null
+     },
+     {
+      "sentence": "The order was for 1 Ceramic Pour-Over Coffee Set, and PayPal records show the payment of 49.99 USD and the shipment on Oct 27, 2026.",
+      "supported": true,
+      "reason": null
+     }
+    ]
+   }
+  },
+  {
+   "t": 5.3,
+   "name": "final",
+   "data": {
+    "sentences": [
+     {
+      "text": "Your order was shipped via USPS with tracking number 9400111899561234567890, and PayPal's tracking status shows SHIPPED.",
+      "cites": [
+       "E4"
+      ],
+      "answers": [
+       "C2"
+      ]
+     },
+     {
+      "text": "The order was for 1 Ceramic Pour-Over Coffee Set, and PayPal records show the payment of 49.99 USD and the shipment on Oct 27, 2026.",
+      "cites": [
+       "E1",
+       "E2",
+       "E4",
+       "E6"
+      ],
+      "answers": [
+       "C1"
+      ]
+     }
+    ],
+    "removed": [],
+    "rounds": 1,
+    "answered": [
+     "C1",
+     "C2"
+    ],
+    "reply": "Your order was shipped via USPS with tracking number 9400111899561234567890, and PayPal's tracking status shows SHIPPED. The order was for 1 Ceramic Pour-Over Coffee Set, and PayPal records show the payment of 49.99 USD and the shipment on Oct 27, 2026."
+   }
+  }
+ ]
+}

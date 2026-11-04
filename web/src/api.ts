@@ -121,11 +121,15 @@ export type DraftEvent =
 
 const DRAFT_EVENTS = ['mode', 'writing', 'draft', 'verifying', 'verdicts', 'rewriting', 'final', 'error'] as const
 
+/** A reply to PayPal's reviewer, or a message to the buyer: the same Writer → Verifier loop. */
+export type DraftKind = 'reply' | 'message'
+
 /** Opens the stream; returns a function that stops it. */
-export function streamDraft(id: string, onEvent: (e: DraftEvent) => void): () => void {
+export function streamDraft(id: string, onEvent: (e: DraftEvent) => void, kind: DraftKind = 'reply'): () => void {
   const pin = demoPin()
   const query = pin ? `?pin=${encodeURIComponent(pin)}` : ''
-  const source = new EventSource(`/api/disputes/${encodeURIComponent(id)}/draft${query}`)
+  const route = kind === 'reply' ? 'draft' : 'message-draft'
+  const source = new EventSource(`/api/disputes/${encodeURIComponent(id)}/${route}${query}`)
   for (const name of DRAFT_EVENTS) {
     source.addEventListener(name, (msg) => {
       onEvent({ name, data: JSON.parse((msg as MessageEvent).data) } as DraftEvent)
@@ -142,9 +146,10 @@ export function streamDraft(id: string, onEvent: (e: DraftEvent) => void): () =>
   return () => source.close()
 }
 
-export async function sendReply(id: string): Promise<{ sent: boolean; status: string }> {
+/** Sends the last verified reply (to PayPal) or message (to the buyer); the server holds the text. */
+export async function sendReply(id: string, kind: DraftKind = 'reply'): Promise<{ sent: boolean; status: string }> {
   const pin = demoPin()
-  const resp = await fetch(`/api/disputes/${encodeURIComponent(id)}/send`, {
+  const resp = await fetch(`/api/disputes/${encodeURIComponent(id)}/${kind === 'reply' ? 'send' : 'message'}`, {
     method: 'POST',
     headers: pin ? { 'X-Demo-Pin': pin } : {},
   })

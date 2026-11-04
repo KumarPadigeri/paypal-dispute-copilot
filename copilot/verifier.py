@@ -7,7 +7,8 @@ from copilot.evidence import DisputeCase
 from copilot.writer import Draft
 
 INSTRUCTIONS = """\
-You check a seller's dispute response, one sentence at a time. You are strict.
+You check a seller's dispute response or message to the buyer, one sentence at a time.
+You are strict.
 
 For each sentence you get ONLY the evidence it cites. Decide whether that evidence
 fully supports it:

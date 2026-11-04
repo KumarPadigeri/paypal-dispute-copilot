@@ -32,12 +32,16 @@ class FakePayPal:
         self.sent.append((dispute_id, evidences))
         return {}
 
+    def send_message(self, dispute_id, message):
+        self.sent.append((dispute_id, message))
+        return {}
+
 
 GOOD = Sentence(text="It shipped via USPS on Oct 27, 2026.", cites=["E4"], answers=["C2"])
 TOO_FAR = Sentence(text="It shipped before the case was opened.", cites=["E4", "E5"])
 
 
-def fake_agents():
+def fake_agents(kind="reply"):
     calls = {"n": 0}
 
     async def write(case, feedback):
@@ -143,6 +147,24 @@ def test_send_sends_exactly_the_verified_reply_once():
     assert client.post("/api/disputes/PP-R-FOD-10194708/send").status_code == 409
 
 
+def test_message_to_the_buyer_is_verified_has_no_closing_and_sends_once():
+    paypal.sent.clear()
+    evs = events(client.get("/api/disputes/PP-R-FOD-10194708/message-draft").text)
+    assert evs[-1][0] == "final"
+    assert evs[-1][1]["reply"] == GOOD.text  # the unproven sentence is gone; no request to PayPal
+    resp = client.post("/api/disputes/PP-R-FOD-10194708/message")
+    assert resp.status_code == 200
+    assert paypal.sent == [("PP-R-FOD-10194708", GOOD.text)]
+    # A second click without a new verified message sends nothing.
+    assert client.post("/api/disputes/PP-R-FOD-10194708/message").status_code == 409
+
+
+def test_a_verified_message_cannot_be_sent_as_the_reply():
+    fresh = TestClient(create_app(FakePayPal(), agents=fake_agents, gate=DemoGate(None, 30)))
+    fresh.get("/api/disputes/PP-R-FOD-10194708/message-draft")
+    assert fresh.post("/api/disputes/PP-R-FOD-10194708/send").status_code == 409
+
+
 # --- Public demo: PIN, daily cap, replay -------------------------------------------------
 
 REPLAY = {
@@ -168,9 +190,9 @@ def demo_client(tmp_path, pin="2468", limit=30, with_replay=True):
         (tmp_path / "PP-R-FOD-10194708.json").write_text(json.dumps(REPLAY))
     calls = {"agents": 0}
 
-    def counting_agents():
+    def counting_agents(kind):
         calls["agents"] += 1
-        return fake_agents()
+        return fake_agents(kind)
 
     app = create_app(
         FakePayPal(),
@@ -201,6 +223,18 @@ def test_with_pin_draft_is_live_and_counts_toward_the_daily_cap(tmp_path):
     second = events(c.get("/api/disputes/PP-R-FOD-10194708/draft?pin=2468").text)
     assert second[0][1] == {"live": False, "why": "limit", "live_left": 0}
     assert calls["agents"] == 1  # cap reached: replay, no extra AI call
+
+
+def test_without_pin_a_message_is_a_replay_and_cannot_be_sent(tmp_path):
+    c, calls = demo_client(tmp_path)
+    (tmp_path / "messages").mkdir()
+    (tmp_path / "messages" / "PP-R-FOD-10194708.json").write_text(json.dumps(REPLAY))
+    evs = events(c.get("/api/disputes/PP-R-FOD-10194708/message-draft").text)
+    assert evs[-1][1]["reply"] == "Recorded reply."
+    assert calls["agents"] == 0
+    assert c.post("/api/disputes/PP-R-FOD-10194708/message").status_code == 403
+    pinned = c.post("/api/disputes/PP-R-FOD-10194708/message", headers={"X-Demo-Pin": "2468"})
+    assert pinned.status_code == 409
 
 
 def test_locked_case_without_a_recording_explains_instead_of_calling_ai(tmp_path):

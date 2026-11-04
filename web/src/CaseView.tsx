@@ -77,6 +77,8 @@ export default function CaseView({ id, onClose }: { id: string; onClose: () => v
   const cites = new Set(focus?.cites ?? [])
   const answers = new Set(focus?.answers ?? [])
   const canSend = c.status === 'WAITING_FOR_SELLER_RESPONSE' && c.actions.includes('provide_evidence')
+  // PayPal lets the seller message the buyer only while the case is open
+  const canMessage = c.actions.includes('send_message')
   const cantSendReason = canSend
     ? null
     : `PayPal isn't waiting for your reply on this case (${status.detail.toLowerCase()}).`
@@ -135,6 +137,19 @@ export default function CaseView({ id, onClose }: { id: string; onClose: () => v
               onFocus={setFocus}
               onSent={load}
             />
+
+            {canMessage && (
+              <DraftPanel
+                kind="message"
+                disputeId={c.dispute_id}
+                evidence={c.evidence}
+                canSend={canMessage}
+                cantSendReason={null}
+                draftBlocked={false}
+                onFocus={setFocus}
+                onSent={load}
+              />
+            )}
           </div>
 
           <section className="panel evidence-panel">

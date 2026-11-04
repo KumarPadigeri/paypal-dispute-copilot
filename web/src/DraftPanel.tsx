@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import {
   type DraftEvent,
+  type DraftKind,
   type Evidence,
   type FinalDraft,
   type Sentence,
@@ -14,13 +15,31 @@ import { statusOf } from './status'
 
 type Step = { key: string; tone: 'run' | 'ok' | 'bad' | 'info'; text: string; detail?: string[] }
 
+// The same panel drafts a reply to PayPal's reviewer or a message to the buyer.
+const WORDS = {
+  reply: {
+    noun: 'reply',
+    title: 'Your reply',
+    intro:
+      "The Writer drafts from PayPal's evidence only. The Verifier then checks every sentence and removes anything the evidence does not prove. Nothing is sent until you approve.",
+    send: 'Approve & send to PayPal',
+  },
+  message: {
+    noun: 'message',
+    title: 'Message the buyer',
+    intro:
+      'A short note to the buyer, such as where their parcel is. Same rule: every sentence cites PayPal evidence, the Verifier checks it, and you approve before it goes.',
+    send: 'Approve & send to buyer',
+  },
+}
+
 /** Turns stream events into the timeline the seller watches. */
-function stepFor(e: DraftEvent): Step | null {
+function stepFor(e: DraftEvent, noun: string): Step | null {
   switch (e.name) {
     case 'mode':
       return null // shown as the replay label, not as a step
     case 'writing':
-      return { key: `w${e.data.round}`, tone: 'run', text: e.data.round === 1 ? 'Writer is drafting a reply from the evidence…' : 'Writer is rewriting…' }
+      return { key: `w${e.data.round}`, tone: 'run', text: e.data.round === 1 ? `Writer is drafting a ${noun} from the evidence…` : 'Writer is rewriting…' }
     case 'draft':
       return { key: `d${e.data.round}`, tone: 'info', text: `Writer drafted ${e.data.sentences.length} sentences` }
     case 'verifying':
@@ -39,13 +58,14 @@ function stepFor(e: DraftEvent): Step | null {
     case 'rewriting':
       return { key: 'rw', tone: 'info', text: `Sending ${e.data.rejected} rejected sentence${e.data.rejected > 1 ? 's' : ''} back to the Writer (one retry)` }
     case 'final':
-      return { key: 'f', tone: 'ok', text: 'Verified reply ready for your review' }
+      return { key: 'f', tone: 'ok', text: `Verified ${noun} ready for your review` }
     case 'error':
       return { key: 'e', tone: 'bad', text: `Something went wrong: ${e.data.message}` }
   }
 }
 
 type Props = {
+  kind?: DraftKind
   disputeId: string
   evidence: Evidence[]
   canSend: boolean
@@ -56,6 +76,7 @@ type Props = {
 }
 
 export default function DraftPanel({
+  kind = 'reply',
   disputeId,
   evidence,
   canSend,
@@ -74,6 +95,7 @@ export default function DraftPanel({
   const [pinRequired, setPinRequired] = useState(false)
   const [unlocked, setUnlocked] = useState(() => demoPin() !== null)
   const stop = useRef<(() => void) | null>(null)
+  const words = WORDS[kind]
 
   useEffect(() => () => stop.current?.(), [])
   useEffect(() => {
@@ -90,14 +112,18 @@ export default function DraftPanel({
     setSendState(null)
     setMode(null)
     setRunning(true)
-    stop.current = streamDraft(disputeId, (e) => {
-      if (e.name === 'mode') setMode(e.data)
-      const step = stepFor(e)
+    stop.current = streamDraft(
+      disputeId,
+      (e) => {
+        if (e.name === 'mode') setMode(e.data)
+        const step = stepFor(e, words.noun)
       // A finished "…ing" step is replaced by its result, so the timeline reads as done.
-      if (step) setSteps((prev) => [...prev.filter((s) => s.tone !== 'run'), step])
-      if (e.name === 'final') setFinal(e.data)
-      if (e.name === 'final' || e.name === 'error') setRunning(false)
-    })
+        if (step) setSteps((prev) => [...prev.filter((s) => s.tone !== 'run'), step])
+        if (e.name === 'final') setFinal(e.data)
+        if (e.name === 'final' || e.name === 'error') setRunning(false)
+      },
+      kind,
+    )
   }
 
   const focus = (i: number | null) => {
@@ -109,7 +135,7 @@ export default function DraftPanel({
     setConfirming(false)
     setSendState({ ok: true, text: 'Sending to PayPal…' })
     try {
-      const r = await sendReply(disputeId)
+      const r = await sendReply(disputeId, kind)
       setSendState({ ok: true, text: `Sent. ${statusOf(r.status).detail}.` })
       onSent()
     } catch (err) {
@@ -120,14 +146,20 @@ export default function DraftPanel({
   return (
     <section className="panel draft">
       <div className="draft-head">
-        <h3 className="section-title">Your reply</h3>
-        {/* Blue while drafting is the next step; once a draft exists, sending is. */}
-        <button className={final || draftBlocked ? 'btn' : 'btn primary'} onClick={start} disabled={running || draftBlocked}>
-          {running ? 'Working…' : final ? 'Draft again' : 'Draft reply'}
+        <h3 className="section-title">{words.title}</h3>
+        {/* Blue while drafting the reply is the next step; once a draft exists, sending is. The
+            message is the secondary task, so its button stays plain. */}
+        <button
+          className={final || draftBlocked || kind === 'message' ? 'btn' : 'btn primary'}
+          onClick={start}
+          disabled={running || draftBlocked}
+        >
+          {running ? 'Working…' : final ? 'Draft again' : `Draft ${words.noun}`}
         </button>
       </div>
 
-      {pinRequired && !unlocked && <DemoUnlock onUnlocked={() => setUnlocked(true)} />}
+      {/* one PIN form per case, in the reply panel; it unlocks both */}
+      {kind === 'reply' && pinRequired && !unlocked && <DemoUnlock onUnlocked={() => setUnlocked(true)} />}
 
       {mode && !mode.live && (
         <p className="replay-label">
@@ -141,12 +173,7 @@ export default function DraftPanel({
         <p className="meta">Drafting is off: the evidence can't support a reply (see the note above).</p>
       )}
 
-      {steps.length === 0 && !draftBlocked && (
-        <p className="meta">
-          The Writer drafts from PayPal's evidence only. The Verifier then checks every sentence and removes anything
-          the evidence does not prove. Nothing is sent until you approve.
-        </p>
-      )}
+      {steps.length === 0 && !draftBlocked && <p className="meta">{words.intro}</p>}
 
       {steps.length > 0 && (
         <ol className="timeline" aria-live="polite">
@@ -219,12 +246,12 @@ export default function DraftPanel({
                 }
                 onClick={() => setConfirming(true)}
               >
-                Approve & send to PayPal
+                {words.send}
               </button>
             ) : (
               <>
                 <button className="btn primary" onClick={send} autoFocus>
-                  Yes, send this reply
+                  Yes, send this {words.noun}
                 </button>
                 <button className="btn" onClick={() => setConfirming(false)}>
                   Cancel

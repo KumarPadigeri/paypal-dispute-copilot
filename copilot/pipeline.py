@@ -89,8 +89,13 @@ async def draft_reply(
     write: WriteFn,
     verify: VerifyFn,
     on_event: Callable[[str, dict], None] = lambda name, data: None,
+    closing: bool = True,
 ) -> Result:
-    """`on_event(name, data)` reports progress: writing, draft, verifying, verdicts, rewriting."""
+    """`on_event(name, data)` reports progress: writing, draft, verifying, verdicts, rewriting.
+
+    `closing` adds the fixed request to PayPal; a message to the buyer goes without it.
+    """
+    close = with_closing if closing else (lambda d: d)
     on_event("writing", {"round": 1})
     draft = await write(case, None)
     on_event("draft", {"round": 1, "sentences": draft.model_dump()["sentences"]})
@@ -98,7 +103,7 @@ async def draft_reply(
     rejected = await review(case, draft, verify)
     on_event("verdicts", {"round": 1, "verdicts": _verdicts(draft, rejected)})
     if not rejected:
-        return Result(draft=with_closing(draft))
+        return Result(draft=close(draft))
 
     first = [Rejection(draft.sentences[i].text, why) for i, why in rejected.items()]
     on_event("rewriting", {"round": 2, "rejected": len(first)})
@@ -110,4 +115,4 @@ async def draft_reply(
 
     kept: list[Sentence] = [s for i, s in enumerate(draft.sentences) if i not in rejected]
     removed = [Rejection(draft.sentences[i].text, why) for i, why in rejected.items()]
-    return Result(with_closing(Draft(sentences=kept)), removed, rounds=2, first_rejections=first)
+    return Result(close(Draft(sentences=kept)), removed, rounds=2, first_rejections=first)

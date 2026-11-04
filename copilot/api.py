@@ -21,7 +21,7 @@ from copilot.evidence import REASONS, gather_case
 from copilot.paypal_client import PayPalClient
 from copilot.pipeline import VerifyFn, WriteFn, draft_reply, final_payload
 from copilot.settings import return_address, setting
-from copilot.submit import NotSendable, build_evidences
+from copilot.submit import NotSendable, build_evidences, check_message
 from copilot.writer import split_claims
 
 # PayPal's dispute stages in plain words, least to most serious.
@@ -33,14 +33,17 @@ STAGES = {
 }
 
 
-def real_agents() -> tuple[WriteFn, VerifyFn]:
+def real_agents(kind: str = "reply") -> tuple[WriteFn, VerifyFn]:
+    """`kind`: "reply" (to PayPal's reviewer) or "message" (to the buyer)."""
     from copilot.llm import make_client
     from copilot.verifier import make_verifier, verify_draft
     from copilot.writer import make_writer, write_draft
 
     client = make_client()
-    writer, verifier = make_writer(client), make_verifier(client)
-    return (lambda c, fb: write_draft(writer, c, fb)), (lambda c, d: verify_draft(verifier, c, d))
+    writer, verifier = make_writer(client, kind), make_verifier(client)
+    return (lambda c, fb: write_draft(writer, c, fb, kind)), (
+        lambda c, d: verify_draft(verifier, c, d)
+    )
 
 
 def sse(name: str, data: dict) -> str:
@@ -64,7 +67,7 @@ def gate_from_env() -> DemoGate:
 
 def create_app(
     paypal=None,
-    agents: Callable[[], tuple[WriteFn, VerifyFn]] = real_agents,
+    agents: Callable[[str], tuple[WriteFn, VerifyFn]] = real_agents,
     gate: DemoGate | None = None,
     replays: Path = REPLAYS,
     replay_speed: float = 1.0,
@@ -73,7 +76,8 @@ def create_app(
     """`paypal`, `agents` and `gate` are injectable so tests use fakes; defaults are real."""
     app = FastAPI(title="Dispute Copilot")
     app.state.paypal = paypal
-    app.state.verified = {}  # dispute id → last verified reply text (the only text we send)
+    # (kind, dispute id) → last verified text: the only text we send
+    app.state.verified = {}
     app.state.gate = gate or gate_from_env()
 
     def pp(request: Request):
@@ -141,34 +145,30 @@ def create_app(
             await asyncio.sleep(1)  # slows down guessing
         return {"ok": ok}
 
-    @app.get("/api/disputes/{dispute_id}/draft")
-    async def draft(dispute_id: str, request: Request, pin: str | None = None) -> StreamingResponse:
+    def stream_draft(case, request: Request, pin: str | None, kind: str) -> StreamingResponse:
         """Streams Writer → Verifier → rewrite as server-sent events.
 
         Live (real AI) with a valid PIN and within today's cap; otherwise a replay of a
         recorded real run, which costs nothing and can never be sent.
         """
-        case = load_case(request, dispute_id)
-        advice = advise(case)
-        if advice and advice.blocks_draft:
-            # Checked before the PIN/cap: no AI call, nothing counted.
-            async def refuse():
-                yield sse("error", {"message": f"{advice.title}. {advice.text}"})
-
-            return StreamingResponse(refuse(), media_type="text/event-stream")
         g: DemoGate = request.app.state.gate
         live = g.unlocked(pin) and g.take_live()
         why = None if live else ("limit" if g.unlocked(pin) else "locked")
-        replay = None if live else load_replay(dispute_id, replays)
+        folder = replays if kind == "reply" else replays / "messages"
+        replay = None if live else load_replay(case.dispute_id, folder)
 
         async def run_live(queue: asyncio.Queue) -> None:
             try:
-                write, verify = agents()
+                write, verify = agents(kind)
                 result = await draft_reply(
-                    case, write, verify, on_event=lambda n, d: queue.put_nowait(sse(n, d))
+                    case,
+                    write,
+                    verify,
+                    on_event=lambda n, d: queue.put_nowait(sse(n, d)),
+                    closing=kind == "reply",
                 )
                 final = final_payload(result)
-                request.app.state.verified[dispute_id] = final["reply"]
+                request.app.state.verified[kind, case.dispute_id] = final["reply"]
                 queue.put_nowait(sse("final", final))
             except Exception as e:  # shown in the UI instead of a silent hang
                 queue.put_nowait(sse("error", {"message": str(e)}))
@@ -194,6 +194,26 @@ def create_app(
 
         return StreamingResponse(stream(), media_type="text/event-stream")
 
+    @app.get("/api/disputes/{dispute_id}/draft")
+    async def draft(dispute_id: str, request: Request, pin: str | None = None) -> StreamingResponse:
+        """The reply to PayPal's reviewer."""
+        case = load_case(request, dispute_id)
+        advice = advise(case)
+        if advice and advice.blocks_draft:
+            # Checked before the PIN/cap: no AI call, nothing counted.
+            async def refuse():
+                yield sse("error", {"message": f"{advice.title}. {advice.text}"})
+
+            return StreamingResponse(refuse(), media_type="text/event-stream")
+        return stream_draft(case, request, pin, "reply")
+
+    @app.get("/api/disputes/{dispute_id}/message-draft")
+    async def message_draft(
+        dispute_id: str, request: Request, pin: str | None = None
+    ) -> StreamingResponse:
+        """A short, cited message to the buyer, checked by the same Verifier."""
+        return stream_draft(load_case(request, dispute_id), request, pin, "message")
+
     @app.post("/api/disputes/{dispute_id}/send")
     def send(
         dispute_id: str, request: Request, x_demo_pin: str | None = Header(default=None)
@@ -201,7 +221,7 @@ def create_app(
         """The merchant's approval: sends the last VERIFIED reply, never browser-typed text."""
         if not request.app.state.gate.unlocked(x_demo_pin):
             raise HTTPException(403, "Sending needs the demo PIN")
-        reply = request.app.state.verified.get(dispute_id)
+        reply = request.app.state.verified.get(("reply", dispute_id))
         if reply is None:
             raise HTTPException(409, "No verified draft for this dispute yet")
         case = load_case(request, dispute_id)
@@ -210,7 +230,28 @@ def create_app(
         except NotSendable as e:
             raise HTTPException(409, str(e)) from e
         pp(request).provide_evidence(dispute_id, evidences)
-        request.app.state.verified.pop(dispute_id)
+        request.app.state.verified.pop(("reply", dispute_id))
+        return {"sent": True, "status": pp(request).get_dispute(dispute_id)["status"]}
+
+    @app.post("/api/disputes/{dispute_id}/message")
+    def send_message(
+        dispute_id: str, request: Request, x_demo_pin: str | None = Header(default=None)
+    ) -> dict:
+        """The merchant's approval: sends the last VERIFIED message, never browser-typed text."""
+        if not request.app.state.gate.unlocked(x_demo_pin):
+            raise HTTPException(403, "Sending needs the demo PIN")
+        message = request.app.state.verified.get(("message", dispute_id))
+        if message is None:
+            raise HTTPException(409, "No verified message for this dispute yet")
+        try:
+            check_message(load_case(request, dispute_id), message)
+        except NotSendable as e:
+            raise HTTPException(409, str(e)) from e
+        try:
+            pp(request).send_message(dispute_id, message)
+        except RuntimeError as e:  # PayPal said no: show its reason instead of a bare 500
+            raise HTTPException(502, str(e)) from e
+        request.app.state.verified.pop(("message", dispute_id))
         return {"sent": True, "status": pp(request).get_dispute(dispute_id)["status"]}
 
     @app.post("/api/disputes/{dispute_id}/resolve")

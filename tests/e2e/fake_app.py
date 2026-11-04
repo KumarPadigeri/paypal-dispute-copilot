@@ -36,10 +36,10 @@ class FixturePayPal:
     def provide_evidence(self, *args):
         raise AssertionError("browser tests must never send")
 
-    accept_claim = make_offer = provide_evidence
+    accept_claim = make_offer = send_message = provide_evidence
 
 
-def no_ai():
+def no_ai(kind):
     raise AssertionError("browser tests must never call the AI")
 
 

@@ -3,6 +3,7 @@ from pathlib import Path
 
 from copilot.evidence import build_case
 from copilot.writer import (
+    TASKS,
     Draft,
     Sentence,
     answered_claims,
@@ -90,3 +91,8 @@ def test_answered_claims_collects_claim_ids():
         ]
     )
     assert answered_claims(draft) == {"C1", "C2"}
+
+
+def test_message_prompt_asks_for_a_message_to_the_buyer():
+    assert build_prompt(case()).endswith("Write the seller's response.")
+    assert build_prompt(case(), TASKS["message"]).endswith("Write the message to the buyer.")

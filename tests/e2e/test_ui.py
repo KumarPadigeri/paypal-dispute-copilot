@@ -107,6 +107,23 @@ def test_without_pin_draft_is_a_replay_and_cannot_be_sent(page: Page):
     assert status == 403
 
 
+def test_message_to_the_buyer_is_a_cited_replay_without_pin(page: Page):
+    page.goto("/#/case/PP-R-FOD-10194708")
+    panel = page.locator(".panel.draft", has_text="Message the buyer")
+    draft = panel.get_by_role("button", name="Draft message")
+    expect(draft).to_have_class("btn")  # the reply stays the blue, main task
+    draft.click()
+    expect(panel.get_by_text("Verified message ready for your review")).to_be_visible(timeout=15000)
+    expect(panel.locator(".sentence").first).to_contain_text("tracking number")
+    panel.locator(".sentence").first.hover()
+    expect(page.locator(".evidence-panel .item.lit").first).to_be_visible()
+    expect(panel.get_by_role("button", name="Approve & send to buyer")).to_be_disabled()
+    status = page.evaluate(
+        "fetch('/api/disputes/PP-R-FOD-10194708/message', {method: 'POST'}).then(r => r.status)"
+    )
+    assert status == 403
+
+
 def test_pointing_at_a_sentence_highlights_its_evidence(page: Page):
     page.goto("/#/case/PP-R-FOD-10194708")
     page.get_by_role("button", name="Draft reply").click()

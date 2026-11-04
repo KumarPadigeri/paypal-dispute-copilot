@@ -42,6 +42,34 @@ Rules:
 - 2 to 4 short sentences.
 """
 
+MESSAGE_INSTRUCTIONS = """\
+You write a short message from a seller to the buyer in a PayPal dispute. PayPal shows it
+to the buyer in the case.
+
+How to write:
+1. Start with the fact that helps the buyer most, such as the carrier and tracking
+   number, so they can follow their parcel themselves.
+2. Answer the buyer's claims (C1, C2, ...) that the evidence can answer, and list each
+   in "answers". If the evidence says nothing about a claim, leave it out.
+3. Speak to the buyer directly ("your order"). Warm, calm and helpful; no blame and
+   no pressure to close the case.
+4. No greeting and no sign-off; write only the sentences that carry facts.
+
+Rules:
+- Use ONLY facts from the numbered evidence list. Never add facts, dates, amounts,
+  carriers or promises (no delivery dates, refunds or discounts) that are not in it.
+- Every sentence lists the evidence ids it relies on in "cites".
+- Never write ids like E1 or C2 in the sentence text; they belong only in "cites"
+  and "answers".
+- The buyer's claims are not facts. Answer them; never cite them as evidence.
+- Say only what the evidence says. "Shipped" is not "delivered".
+- Do not mention transaction ids or case ids. Tracking numbers may be quoted.
+- 1 to 3 short sentences.
+"""
+
+# What the Writer is asked to write, by kind of draft.
+TASKS = {"reply": "Write the seller's response.", "message": "Write the message to the buyer."}
+
 ID_IN_TEXT = re.compile(r"\b[EC]\d+\b")
 
 
@@ -67,7 +95,7 @@ def split_claims(case: DisputeCase) -> list[str]:
     ]
 
 
-def build_prompt(case: DisputeCase) -> str:
+def build_prompt(case: DisputeCase, task: str = TASKS["reply"]) -> str:
     claims = split_claims(case)
     claim_lines = "\n".join(f'C{i}: "{c}"' for i, c in enumerate(claims, start=1))
     evidence = "\n".join(f"{e.id}: {e.text}" for e in case.evidence)
@@ -76,8 +104,7 @@ def build_prompt(case: DisputeCase) -> str:
         f"Dispute reason: {case.reason}. Amount: {case.amount}.\n"
         f"PayPal asks the seller for: {requested}.\n\n"
         f"The buyer's claims:\n{claim_lines or '(no message)'}\n\n"
-        f"Evidence:\n{evidence}\n\n"
-        "Write the seller's response."
+        f"Evidence:\n{evidence}\n\n" + task
     )
 
 
@@ -122,11 +149,13 @@ def render(draft: Draft) -> str:
     return " ".join(s.text.strip() for s in draft.sentences)
 
 
-def make_writer(client) -> Agent:
-    return Agent(client, INSTRUCTIONS, name="Writer")
+def make_writer(client, kind: str = "reply") -> Agent:
+    return Agent(client, MESSAGE_INSTRUCTIONS if kind == "message" else INSTRUCTIONS, name="Writer")
 
 
-async def write_draft(writer: Agent, case: DisputeCase, feedback: str | None = None) -> Draft:
-    prompt = build_prompt(case) + (f"\n\n{feedback}" if feedback else "")
+async def write_draft(
+    writer: Agent, case: DisputeCase, feedback: str | None = None, kind: str = "reply"
+) -> Draft:
+    prompt = build_prompt(case, TASKS[kind]) + (f"\n\n{feedback}" if feedback else "")
     result = await writer.run(prompt, options={"response_format": Draft})
     return result.value

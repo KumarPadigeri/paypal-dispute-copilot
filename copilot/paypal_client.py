@@ -1,8 +1,8 @@
 """PayPal sandbox client: reads go through PayPal's Agent Toolkit; actions use REST directly.
 
 The toolkit covers listing and reading disputes and reading shipment tracking. Sending evidence,
-making an offer, accepting a claim (with REFUND) and adding tracking with a ship date are not in
-it, or not in the shape we need, so those stay as plain REST calls below.
+messaging the buyer, making an offer, accepting a claim (with REFUND) and adding tracking with a
+ship date are not in it, or not in the shape we need, so those stay as plain REST calls below.
 """
 
 import json
@@ -93,6 +93,17 @@ class PayPalClient:
         )
         if resp.status_code >= 400:
             raise RuntimeError(f"PayPal refused the evidence ({resp.status_code}): {resp.text}")
+        return resp.json()
+
+    def send_message(self, dispute_id: str, message: str) -> dict:
+        """A message to the buyer, shown in the case (it changes nothing else)."""
+        resp = self._http.post(
+            f"/v1/customer/disputes/{dispute_id}/send-message",
+            headers=self._headers(),
+            files={"input": (None, json.dumps({"message": message}), "application/json")},
+        )
+        if resp.status_code >= 400:
+            raise RuntimeError(f"PayPal refused the message ({resp.status_code}): {resp.text}")
         return resp.json()
 
     def accept_claim(self, dispute_id: str, note: str) -> dict:
