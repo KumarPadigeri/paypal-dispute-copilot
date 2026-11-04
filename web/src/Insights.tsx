@@ -2,7 +2,6 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import type { AgChartOptions } from 'ag-charts-community'
 import { AgCharts } from 'ag-charts-react'
 import Dashboard from './Dashboard'
-import { ArrowLeftIcon } from './icons'
 import { type DisputeSummary, formatMoney, listDisputes } from './api'
 import { BUCKETS, bucketOf, drillHref } from './drill'
 
@@ -203,10 +202,6 @@ export default function Insights() {
   return (
     <section className="insights" aria-labelledby="insights-title">
       <div className="insights-head">
-        <a className="back-link" href="#">
-          <ArrowLeftIcon />
-          Back to disputes
-        </a>
         <h2 id="insights-title" ref={heading} tabIndex={-1}>
           Insights
         </h2>

@@ -476,7 +476,7 @@ def test_insights_answer_what_is_at_stake_and_why(page: Page):
         "aria-label", re.compile(r"Item not received \(2 cases\)", re.I)
     )
     assert axe_violations(page) == []
-    page.get_by_role("link", name="Back to disputes").first.click()
+    page.get_by_role("navigation", name="Screens").get_by_role("link", name="Disputes").click()
     expect(page.locator(".list-footer")).to_be_visible()
 
 

@@ -60,11 +60,6 @@ export const MoneyIcon = () => (
   </svg>
 )
 
-export const ArrowLeftIcon = () => (
-  <svg {...base}>
-    <path d="M13 8H3.5M7.5 4 3.5 8l4 4" />
-  </svg>
-)
 
 export const ChartIcon = () => (
   <svg {...base}>
