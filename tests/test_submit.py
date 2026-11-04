@@ -21,7 +21,9 @@ def test_case_knows_allowed_actions_and_shipments():
     c = case()
     assert "provide_evidence" in c.actions
     assert "self" not in c.actions
-    assert c.shipments == [{"carrier": "USPS", "tracking_number": "9400111899561234567890"}]
+    assert c.shipments == [
+        {"carrier": "USPS", "tracking_number": "9400111899561234567890", "status": "SHIPPED"}
+    ]
 
 
 def test_payload_is_proof_of_fulfillment_with_paypal_tracking_and_the_reply():

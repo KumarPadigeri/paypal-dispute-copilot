@@ -21,6 +21,9 @@ async function getJson<T>(path: string): Promise<T> {
 
 export const listDisputes = () => getJson<DisputeSummary[]>('/api/disputes')
 
+/** Window event after an action changed a case, so the inbox fetches PayPal's new status. */
+export const DISPUTES_CHANGED = 'disputes:changed'
+
 /** PayPal's dispute reasons, in plain words and PayPal's order. */
 export const listReasons = () => getJson<string[]>('/api/reasons')
 
@@ -73,7 +76,9 @@ export type CaseDetail = {
   evidence: Evidence[]
   claims: Claim[]
   actions: string[]
-  shipments: { carrier: string; tracking_number: string }[]
+  shipments: { carrier: string; tracking_number: string; status: string | null }[]
+  // What PayPal asks for against what its records hold (plain code); null when the advice covers it
+  check: { tone: 'ok' | 'warn'; text: string } | null
   advice: {
     title: string
     text: string

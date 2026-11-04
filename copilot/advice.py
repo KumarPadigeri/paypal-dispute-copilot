@@ -75,3 +75,52 @@ def advise(case: DisputeCase) -> Advice | None:
 def available(advice: Advice, actions: list[str]) -> list[Resolution]:
     """The advised resolutions PayPal allows on this case right now."""
     return [RESOLUTIONS[k] for k in advice.resolutions if RESOLUTIONS[k].needs in actions]
+
+
+# What PayPal asks the seller for (`evidences` REQUESTED_FROM_SELLER), in plain words.
+ASKED = {
+    "PROOF_OF_FULFILLMENT": "proof of shipping",
+    "PROOF_OF_REFUND": "proof of refund",
+    "PROOF_OF_DELIVERY_SIGNATURE": "a delivery signature",
+    "ITEM_DESCRIPTION": "an item description",
+}
+
+
+@dataclass(frozen=True)
+class EvidenceCheck:
+    tone: str  # "ok": PayPal's records hold what it asks for; "warn": something is missing
+    text: str
+
+
+def evidence_check(case: DisputeCase) -> EvidenceCheck | None:
+    """What PayPal asks for against what its records hold, for a case waiting on the seller.
+
+    Plain code, shown at the top of the case. Cases the advice covers (no proof) get the advice.
+    """
+    if case.status != "WAITING_FOR_SELLER_RESPONSE" or advise(case):
+        return None
+    have = {"PROOF_OF_FULFILLMENT"} if case.shipments else set()
+    missing = [
+        ASKED.get(r, r.lower().replace("_", " "))
+        for r in case.requested_from_seller
+        if r not in have
+    ]
+    if missing:
+        return EvidenceCheck(
+            "warn",
+            f"PayPal asks for {' and '.join(missing)}, and its records don't have it yet. "
+            "Add it in PayPal before you reply.",
+        )
+    if not case.shipments:
+        return None
+    s = case.shipments[0]
+    tracking = f"{s['carrier']} tracking {s['tracking_number']}"
+    if "PROOF_OF_FULFILLMENT" in case.requested_from_seller:
+        text = f"Strong evidence: PayPal asks for proof of shipping, and you have {tracking}."
+    else:
+        text = f"Strong evidence: you have {tracking}."
+    if case.protection:
+        text += f" The payment is eligible for {case.protection}."
+    if s.get("status") != "DELIVERED":
+        text += " Tracking shows it shipped, not yet delivered."
+    return EvidenceCheck("ok", text)

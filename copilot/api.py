@@ -15,7 +15,7 @@ from fastapi.responses import StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
-from copilot.advice import advise, available
+from copilot.advice import advise, available, evidence_check
 from copilot.demo import REPLAYS, DemoGate, load_replay, play
 from copilot.evidence import REASONS, gather_case
 from copilot.paypal_client import PayPalClient
@@ -121,8 +121,10 @@ def create_app(
     def get_case(dispute_id: str, request: Request) -> dict:
         case = load_case(request, dispute_id)
         advice = advise(case)
+        check = evidence_check(case)
         return {
             **asdict(case),
+            "check": asdict(check) if check else None,
             "claims": [{"id": f"C{i}", "text": c} for i, c in enumerate(split_claims(case), 1)],
             "advice": {
                 **asdict(advice),

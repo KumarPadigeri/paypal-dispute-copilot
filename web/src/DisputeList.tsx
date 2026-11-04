@@ -1,5 +1,6 @@
 import { lazy, Suspense, useEffect, useRef, useState } from 'react'
 import {
+  DISPUTES_CHANGED,
   type DisputeSummary,
   formatDate,
   formatMoney,
@@ -10,6 +11,7 @@ import Deadline from './Deadline'
 import { downloadCsv } from './csv'
 import { type Drill, drillFromHash, drillLabel, drillMatches } from './drill'
 import Dashboard from './Dashboard'
+import Welcome from './Welcome'
 import { CloseIcon, SearchIcon } from './icons'
 import { ListSkeleton } from './Skeleton'
 import StatusPill from './StatusPill'
@@ -56,7 +58,6 @@ const EMPTY: Record<'all' | Group, string> = {
 }
 
 const dueTime = (d: DisputeSummary) => (d.respond_by ? Date.parse(d.respond_by) : Number.MAX_SAFE_INTEGER)
-
 
 type ItemsProps = { items: DisputeSummary[]; openId: string | null; onOpen: (id: string) => void }
 
@@ -137,10 +138,14 @@ function Footer({ page, pages, from, to, total, all, onPage, pageSize, onPageSiz
   )
 }
 
-// Default order: cases that need a reply first, the soonest deadline at the top.
+// Default order, most urgent first: cases that need a reply (soonest deadline at the top), then
+// those waiting on the buyer or PayPal, then resolved ones; newest first within each.
+const RANK: Record<string, number> = { reply: 0, waiting: 1, resolved: 2 }
+const opened = (d: DisputeSummary) => (d.created ? Date.parse(d.created) : 0)
 const needsReplyFirst = (a: DisputeSummary, b: DisputeSummary) =>
-  Number(statusOf(b.status).group === 'reply') - Number(statusOf(a.status).group === 'reply') ||
-  dueTime(a) - dueTime(b)
+  (RANK[statusOf(a.status).group ?? 'waiting'] ?? 1) - (RANK[statusOf(b.status).group ?? 'waiting'] ?? 1) ||
+  dueTime(a) - dueTime(b) ||
+  opened(b) - opened(a)
 
 type Props = {
   openId: string | null
@@ -182,8 +187,13 @@ export default function DisputeList({ openId, asTable, onOpen, onExport }: Props
   }, [asTable, onExport])
 
   useEffect(() => {
-    listDisputes().then((list) => setDisputes([...list].sort(needsReplyFirst)), (e: Error) => setError(e.message))
+    const load = () =>
+      listDisputes().then((list) => setDisputes([...list].sort(needsReplyFirst)), (e: Error) => setError(e.message))
+    load()
     listReasons().then(setAllReasons, () => setAllReasons([])) // the grid's reason dropdown still works from the cases
+    // An action on a case changed its status: fetch again (the grid flashes the cells that changed)
+    window.addEventListener(DISPUTES_CHANGED, load)
+    return () => window.removeEventListener(DISPUTES_CHANGED, load)
   }, [])
 
   if (error) return <div className="notice error">Could not load disputes from PayPal ({error}).</div>
@@ -218,9 +228,8 @@ export default function DisputeList({ openId, asTable, onOpen, onExport }: Props
 
   return (
     <>
-      {!openId && (
-        <Dashboard disputes={disputes} />
-      )}
+      {!openId && <Welcome first={disputes.find((d) => statusOf(d.status).group === 'reply')} onOpen={onOpen} />}
+      {!openId && <Dashboard disputes={disputes} />}
       {/* Status chips, then a full-width search under them */}
       <div className="filters">
         <div className="chips" role="group" aria-label="Filter by status">

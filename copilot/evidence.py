@@ -55,6 +55,7 @@ class DisputeCase:
     channel: str | None = None
     opened_iso: str | None = None
     updated_iso: str | None = None
+    protection: str | None = None  # Seller Protection the payment is eligible for, in plain words
 
 
 def money(m: dict) -> str:
@@ -179,8 +180,21 @@ def build_case(d: dict, trackers: list[dict] | None = None) -> DisputeCase:
         evidence=evidence_from_dispute(d, trackers),
         actions=[link["rel"] for link in d.get("links", []) if link.get("rel") != "self"],
         shipments=[
-            {"carrier": t["carrier"], "tracking_number": t["tracking_number"]}
+            {
+                "carrier": t["carrier"],
+                "tracking_number": t["tracking_number"],
+                "status": t.get("status"),
+            }
             for t in trackers or []
             if t.get("shipment_direction", "FORWARD") == "FORWARD"
         ],
+        protection=next(
+            (
+                PROTECTION[t["seller_protection_type"]]
+                for t in d.get("disputed_transactions", [])
+                if t.get("seller_protection_eligible")
+                and t.get("seller_protection_type") in PROTECTION
+            ),
+            None,
+        ),
     )

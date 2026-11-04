@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import Deadline from './Deadline'
 import DraftPanel from './DraftPanel'
 import { CaseSkeleton } from './Skeleton'
-import { AlertIcon, CloseIcon, CopyIcon } from './icons'
+import { AlertIcon, CheckIcon, CloseIcon, CopyIcon } from './icons'
 import {
   type CaseDetail,
   REQUESTED,
@@ -10,6 +10,7 @@ import {
   formatAmount,
   getCase,
   resolveCase,
+  DISPUTES_CHANGED,
 } from './api'
 import StatusPill from './StatusPill'
 import Timeline from './Timeline'
@@ -25,6 +26,12 @@ export default function CaseView({ id, onClose }: { id: string; onClose: () => v
   }, [id])
 
   useEffect(load, [load])
+
+  // After a send, refund or offer: reload this case and tell the inbox to fetch PayPal's new status
+  const changed = useCallback(() => {
+    load()
+    window.dispatchEvent(new Event(DISPUTES_CHANGED))
+  }, [load])
 
   // Focus moves into the panel at once (its title, while PayPal's data loads), then to the case
   // heading when it arrives: keyboard and screen-reader users never land on nothing.
@@ -72,7 +79,9 @@ export default function CaseView({ id, onClose }: { id: string; onClose: () => v
 
   const status = statusOf(c.status)
   // What PayPal asks for only matters while it waits for the seller.
-  const requested = status.group === 'reply' ? c.requested_from_seller.map((r) => REQUESTED[r] ?? r) : []
+  // (the evidence check below says it when there is one)
+  const requested =
+    status.group === 'reply' && !c.check ? c.requested_from_seller.map((r) => REQUESTED[r] ?? r) : []
   const due = status.group === 'reply' && c.respond_by_iso
   const cites = new Set(focus?.cites ?? [])
   const answers = new Set(focus?.answers ?? [])
@@ -109,9 +118,15 @@ export default function CaseView({ id, onClose }: { id: string; onClose: () => v
             </p>
           )}
           <Timeline c={c} />
+          {c.check && (
+            <p className={`evidence-check ${c.check.tone}`}>
+              {c.check.tone === 'ok' ? <CheckIcon /> : <AlertIcon />}
+              <span>{c.check.text}</span>
+            </p>
+          )}
         </section>
 
-        {c.advice && <AdviceBox disputeId={c.dispute_id} advice={c.advice} amount={c.amount} onDone={load} />}
+        {c.advice && <AdviceBox disputeId={c.dispute_id} advice={c.advice} amount={c.amount} onDone={changed} />}
 
         <div className="columns">
           <div className="stack">
@@ -136,7 +151,7 @@ export default function CaseView({ id, onClose }: { id: string; onClose: () => v
               cantSendReason={cantSendReason}
               draftBlocked={c.advice?.blocks_draft ?? false}
               onFocus={setFocus}
-              onSent={load}
+              onSent={changed}
             />
 
             {canMessage && (
@@ -148,7 +163,7 @@ export default function CaseView({ id, onClose }: { id: string; onClose: () => v
                 cantSendReason={null}
                 draftBlocked={false}
                 onFocus={setFocus}
-                onSent={load}
+                onSent={changed}
               />
             )}
           </div>

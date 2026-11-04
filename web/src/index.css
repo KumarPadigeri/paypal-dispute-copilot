@@ -210,6 +210,94 @@ button {
   font-variant-numeric: tabular-nums;
 }
 
+/* First visit: what the app does and where to click; dismissed for good */
+.welcome {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 16px 24px;
+  background: var(--accent-soft);
+  border: 1px solid var(--accent);
+  border-radius: var(--radius);
+  padding: 14px 52px 14px 18px;
+  margin-bottom: 16px;
+}
+
+.welcome-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.welcome p {
+  margin: 0;
+  font-size: 14px;
+}
+
+.welcome .welcome-title {
+  font-size: 15px;
+  font-weight: 600;
+  margin-bottom: 2px;
+}
+
+.welcome-steps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 20px;
+  margin: 8px 0 0;
+  padding-left: 18px;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.welcome .btn {
+  flex: none;
+}
+
+.welcome-close {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+}
+
+@media (max-width: 600px) {
+  .welcome {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .welcome-steps {
+    flex-direction: column;
+  }
+}
+
+/* Line 3 (when PayPal is waiting): what it asks for against what its records hold */
+.evidence-check {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 6px 0 0;
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 13.5px;
+  color: var(--text);
+  background: var(--ok-soft);
+}
+
+.evidence-check svg {
+  flex: none;
+  margin-top: 2px;
+  color: var(--ok);
+}
+
+.evidence-check.warn {
+  background: var(--warn-soft);
+}
+
+.evidence-check.warn svg {
+  color: var(--warn);
+}
+
 .asks strong {
   color: var(--text);
   font-weight: 600;
@@ -1771,6 +1859,25 @@ th[aria-sort] .th-sort {
   display: flex;
   align-items: center; /* pills and the deadline keep their own height instead of filling the row */
   justify-content: center;
+}
+
+/* Totals row (pinned under the rows): count and money left by the filters */
+.grid-wrap .ag-floating-bottom .ag-cell {
+  font-weight: 600;
+}
+
+.grid-total {
+  color: var(--text);
+  font-weight: 600;
+}
+
+/* Reply due soon: a colored edge on the row's first cell (red at 2 days or fewer, amber at 5) */
+.grid-wrap .ag-pinned-left-cols-container .ag-row.due-bad {
+  box-shadow: inset 3px 0 0 var(--bad);
+}
+
+.grid-wrap .ag-pinned-left-cols-container .ag-row.due-warn {
+  box-shadow: inset 3px 0 0 var(--warn);
 }
 
 .grid-wrap .ag-cell.strong {

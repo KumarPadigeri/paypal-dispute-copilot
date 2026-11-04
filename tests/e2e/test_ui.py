@@ -509,3 +509,48 @@ def test_insights_link_opens_the_inbox_filtered_and_the_tag_removes_it(page: Pag
     page.get_by_role("button", name="Remove filter Waiting on buyer or PayPal").click()
     expect(page.locator(".drill-tag")).to_have_count(0)
     expect(footer).to_contain_text("Showing all 2")
+
+
+def test_welcome_opens_the_first_case_and_stays_dismissed(page: Page):
+    page.goto("/")
+    welcome = page.get_by_role("region", name="Welcome")
+    expect(welcome).to_contain_text("AI that answers PayPal disputes, with proof")
+    welcome.get_by_role("button", name="Try it on the $49.99 case").click()
+    expect(page.locator(".case-head h2")).to_have_text("Item not received")
+    page.keyboard.press("Escape")
+    page.get_by_role("button", name="Dismiss welcome").click()
+    expect(welcome).to_have_count(0)
+    page.reload()
+    expect(page.locator(".list .row").first).to_be_visible()
+    expect(welcome).to_have_count(0)
+
+
+def test_case_says_whether_it_has_what_paypal_asks_for(page: Page):
+    page.goto("/#/case/PP-R-FOD-10194708")
+    check = page.locator(".evidence-check")
+    expect(check).to_have_class(re.compile(r"\bok\b"))
+    expect(check).to_contain_text("PayPal asks for proof of shipping, and you have USPS tracking")
+    expect(check).to_contain_text("shipped, not yet delivered")
+    expect(page.locator(".case-head .asks")).to_have_count(0)  # said once, in the check
+    page.goto("/#/case/PP-R-TEST-00000002")  # no tracking: the advice box speaks instead
+    expect(page.locator(".advice h3")).to_be_visible()
+    expect(page.locator(".evidence-check")).to_have_count(0)
+
+
+def test_grid_totals_follow_the_filters_and_urgent_rows_are_marked(browser, base_url):
+    context = browser.new_context(
+        base_url=base_url, timezone_id="UTC", viewport={"width": 1366, "height": 768}
+    )
+    context.add_init_script(LIST_VIEW)
+    pg = context.new_page()
+    pg.clock.set_fixed_time("2026-11-14T12:00:00Z")  # both cases are due in under 2 days
+    pg.goto("/")
+    total = pg.locator(".ag-floating-bottom")  # pinned Case part + the rest
+    expect(total).to_contain_text("Total · 2 disputes")
+    expect(total).to_contain_text("$84.99")
+    pg.get_by_role("textbox", name="Amount filter").fill("49")
+    expect(total).to_contain_text("Total · 1 dispute")
+    expect(total).to_contain_text("$49.99")
+    edge = ".ag-pinned-left-cols-container .ag-row.due-bad"
+    expect(pg.locator(edge)).to_have_count(1)
+    context.close()

@@ -148,3 +148,25 @@ def test_paypal_refusal_is_shown_not_a_bare_500():
     c = TestClient(create_app(RefusingPayPal(), gate=DemoGate(None, 30)))
     r = c.post("/api/disputes/PP-R-FOD-10194708/resolve", json={"action": "refund"})
     assert r.status_code == 502 and "not allowed now" in r.json()["detail"]
+
+
+def test_evidence_check_says_what_paypal_asks_for_and_what_is_on_file():
+    from copilot.advice import evidence_check
+
+    check = evidence_check(build_case(DISPUTE, TRACKERS))
+    assert check.tone == "ok"
+    assert check.text == (
+        "Strong evidence: PayPal asks for proof of shipping, and you have USPS tracking "
+        "9400111899561234567890. The payment is eligible for Expanded Seller Protection. "
+        "Tracking shows it shipped, not yet delivered."
+    )
+
+
+def test_evidence_check_names_what_is_missing_and_stays_quiet_otherwise():
+    from copilot.advice import evidence_check
+
+    c = build_case(DISPUTE, TRACKERS)
+    missing = evidence_check(replace(c, requested_from_seller=["PROOF_OF_DELIVERY_SIGNATURE"]))
+    assert missing.tone == "warn" and "a delivery signature" in missing.text
+    assert evidence_check(replace(c, status="RESOLVED")) is None  # PayPal isn't waiting
+    assert evidence_check(build_case(DISPUTE, [])) is None  # the advice box covers it

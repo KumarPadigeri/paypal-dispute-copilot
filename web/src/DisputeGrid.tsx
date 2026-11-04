@@ -10,8 +10,10 @@ import {
   DragAndDropModule,
   EventApiModule,
   GridStateModule,
+  HighlightChangesModule,
   ModuleRegistry,
   PaginationModule,
+  PinnedRowModule,
   QuickFilterModule,
   RowApiModule,
   RowStyleModule,
@@ -29,10 +31,12 @@ import { AgGridReact, type CustomFloatingFilterProps } from 'ag-grid-react'
 import Deadline from './Deadline'
 import StatusPill from './StatusPill'
 import { type DisputeSummary, formatAgo, formatDate, formatDateTime, formatMoney } from './api'
+import { dueOf } from './due'
 import { GROUPS, statusOf } from './status'
 
 // Only free (Community) features: sorting, resizable and draggable columns, column filters, quick
-// search, paging, tooltips, CSV export and a remembered layout. Validation (readable errors) in development only.
+// search, paging, tooltips, CSV export, a remembered layout, a pinned totals row and a flash when
+// a status changes. Validation (readable errors) in development only.
 ModuleRegistry.registerModules([
   ClientSideRowModelModule,
   ColumnApiModule, // export leaves out the clear-all column
@@ -48,6 +52,8 @@ ModuleRegistry.registerModules([
   CellStyleModule,
   RowStyleModule,
   DragAndDropModule, // drag a header to move its column
+  PinnedRowModule, // the totals row under the rows
+  HighlightChangesModule, // a status cell flashes when PayPal reports a change
   ...(import.meta.env.DEV ? [ValidationModule] : []),
 ])
 
@@ -69,6 +75,29 @@ function saveLayout(state: GridState) {
     /* private mode: layout lasts this visit only */
   }
 }
+
+// The totals row: how many disputes the filters leave and the money in them (one currency only)
+type Total = DisputeSummary & { count: number }
+function totalOf(rows: DisputeSummary[]): Total {
+  const currencies = new Set(rows.flatMap((d) => (d.amount ? [d.amount.currency_code] : [])))
+  const currency = currencies.size === 1 ? [...currencies][0] : null
+  const sum = rows.reduce((s, d) => s + Number(d.amount?.value ?? 0), 0)
+  return {
+    id: '__total',
+    count: rows.length,
+    status: '',
+    reason: '',
+    amount: currency ? { currency_code: currency, value: sum.toFixed(2) } : null,
+    created: null,
+    updated: null,
+    stage: null,
+    respond_by: null,
+  }
+}
+
+// A colored left edge on rows whose reply is due soon: red at 2 days or fewer, amber at 5
+const dueTone = (d?: DisputeSummary) =>
+  d && statusOf(d.status).group === 'reply' ? dueOf(d.respond_by)?.tone : undefined
 
 // AG Grid's Quartz theme drawn with our own color tokens, so light and dark follow the app.
 const theme = themeQuartz.withParams({
@@ -269,9 +298,18 @@ type Props = {
 export default function DisputeGrid({ items, reasons, search, page, pageSize, openId, onOpen, onCount, onReady }: Props) {
   const api = useRef<GridApi<DisputeSummary> | null>(null)
   const [visible, setVisible] = useState(items.length) // rows the column filters leave
-  const count = (n: number) => {
-    setVisible(n)
-    onCount(n)
+  const [total, setTotal] = useState<Total[]>([])
+  // After any change to the rows or filters: the footer's count and the totals row
+  const recount = (e: { api: GridApi<DisputeSummary> }) => {
+    // every row the filters and search leave, on all pages
+    const rows: DisputeSummary[] = []
+    for (let i = 0; i < e.api.getDisplayedRowCount(); i++) {
+      const data = e.api.getDisplayedRowAtIndex(i)?.data
+      if (data) rows.push(data)
+    }
+    setVisible(rows.length)
+    onCount(rows.length)
+    setTotal(rows.length > 0 ? [totalOf(rows)] : [])
   }
 
   const columns = useMemo<ColDef<DisputeSummary>[]>(
@@ -299,6 +337,11 @@ export default function DisputeGrid({ items, reasons, search, page, pageSize, op
       {
         headerName: 'Case',
         field: 'id',
+        // the totals row's label is its value, so the cell redraws when the count changes
+        valueGetter: (p) => {
+          const n = (p.data as Total | undefined)?.count ?? 0
+          return p.node?.rowPinned ? `Total · ${n} ${n === 1 ? 'dispute' : 'disputes'}` : p.data?.id
+        },
         minWidth: 180,
         // Always the first column, pinned so it stays in view when the table scrolls sideways
         pinned: 'left',
@@ -308,7 +351,10 @@ export default function DisputeGrid({ items, reasons, search, page, pageSize, op
         ...containsFilter('Case'),
         // Only the case id opens a case (a real button: works with mouse and keyboard)
         cellRenderer: (p: ICellRendererParams<DisputeSummary>) =>
-          p.data && (
+          p.node.rowPinned ? (
+            <span className="grid-total">{p.value}</span>
+          ) : (
+            p.data && (
             <button
               className="link mono"
               data-open={p.data.id}
@@ -317,6 +363,7 @@ export default function DisputeGrid({ items, reasons, search, page, pageSize, op
             >
               {p.data.id}
             </button>
+            )
           ),
         suppressKeyboardEvent: (p) => p.event.key === 'Enter', // let Enter press the button
       },
@@ -336,7 +383,9 @@ export default function DisputeGrid({ items, reasons, search, page, pageSize, op
         headerName: 'Status',
         colId: 'status',
         valueGetter: (p) => statusOf(p.data?.status ?? '').label,
-        cellRenderer: (p: ICellRendererParams<DisputeSummary>) => p.data && <StatusPill status={p.data.status} />,
+        cellRenderer: (p: ICellRendererParams<DisputeSummary>) =>
+          p.data && !p.node.rowPinned && <StatusPill status={p.data.status} />,
+        enableCellChangeFlash: true,
         ...pickFilter('Status', Object.values(GROUPS).map((g) => g.label)),
         cellClass: 'center',
         headerClass: 'center',
@@ -349,7 +398,11 @@ export default function DisputeGrid({ items, reasons, search, page, pageSize, op
         valueGetter: (p) => (p.data && statusOf(p.data.status).group === 'reply' ? time(p.data.respond_by) : null),
         valueFormatter: (p) => (p.value ? formatDate(p.data?.respond_by ?? null) : '—'),
         cellRenderer: (p: ICellRendererParams<DisputeSummary>) =>
-          p.value ? <Deadline iso={p.data?.respond_by} label="" /> : <span className="muted">—</span>,
+          p.node.rowPinned ? null : p.value ? (
+            <Deadline iso={p.data?.respond_by} label="" />
+          ) : (
+            <span className="muted">—</span>
+          ),
         comparator: byTime,
         ...dateFilter('Reply by'),
         cellClass: 'center',
@@ -359,7 +412,7 @@ export default function DisputeGrid({ items, reasons, search, page, pageSize, op
       {
         headerName: 'Stage',
         colId: 'stage',
-        valueGetter: (p) => p.data?.stage ?? '—',
+        valueGetter: (p) => (p.node?.rowPinned ? '' : (p.data?.stage ?? '—')),
         ...containsFilter('Stage'),
         cellClass: 'center',
         headerClass: 'center',
@@ -402,7 +455,12 @@ export default function DisputeGrid({ items, reasons, search, page, pageSize, op
         columnDefs={columns}
         defaultColDef={{ sortable: true, resizable: true, flex: 1 }}
         getRowId={(p) => p.data.id}
-        rowClassRules={{ selected: (p) => p.data?.id === openId }}
+        rowClassRules={{
+          selected: (p) => p.data?.id === openId,
+          'due-bad': (p) => !p.node.rowPinned && dueTone(p.data) === 'bad',
+          'due-warn': (p) => !p.node.rowPinned && dueTone(p.data) === 'warn',
+        }}
+        pinnedBottomRowData={total}
         quickFilterText={search}
         initialState={savedLayout()}
         onStateUpdated={(e) => saveLayout(e.state)}
@@ -420,11 +478,12 @@ export default function DisputeGrid({ items, reasons, search, page, pageSize, op
             e.api.exportDataAsCsv({
               fileName: 'disputes.csv',
               columnKeys: e.api.getAllDisplayedColumns().filter((c) => c.getColId() !== CLEAR_COL),
+              skipPinnedBottom: true, // the totals row is for the screen
             }),
           )
         }}
-        onFilterChanged={(e) => count(e.api.getDisplayedRowCount())}
-        onRowDataUpdated={(e) => count(e.api.getDisplayedRowCount())}
+        onFilterChanged={recount}
+        onRowDataUpdated={recount}
       />
       {visible === 0 && (
         <p className="grid-empty" role="status">
