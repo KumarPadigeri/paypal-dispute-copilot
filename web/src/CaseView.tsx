@@ -77,8 +77,9 @@ export default function CaseView({ id, onClose }: { id: string; onClose: () => v
   const cites = new Set(focus?.cites ?? [])
   const answers = new Set(focus?.answers ?? [])
   const canSend = c.status === 'WAITING_FOR_SELLER_RESPONSE' && c.actions.includes('provide_evidence')
-  // PayPal lets the seller message the buyer only while the case is open
-  const canMessage = c.actions.includes('send_message')
+  // PayPal lets the seller message the buyer only while the case is open. When the evidence
+  // can't support a reply it can't help the buyer either: the advised resolution has its own note.
+  const canMessage = c.actions.includes('send_message') && !c.advice?.blocks_draft
   const cantSendReason = canSend
     ? null
     : `PayPal isn't waiting for your reply on this case (${status.detail.toLowerCase()}).`

@@ -159,6 +159,20 @@ def test_message_to_the_buyer_is_verified_has_no_closing_and_sends_once():
     assert client.post("/api/disputes/PP-R-FOD-10194708/message").status_code == 409
 
 
+def test_no_message_when_the_evidence_cannot_help_and_no_ai_is_called():
+    class NoTracking(FakePayPal):
+        def list_trackers(self, txn):
+            return []
+
+    def no_ai(kind):
+        raise AssertionError("no AI call when the advice blocks drafting")
+
+    c = TestClient(create_app(NoTracking(), agents=no_ai, gate=DemoGate(None, 30)))
+    evs = events(c.get("/api/disputes/PP-R-FOD-10194708/message-draft").text)
+    assert evs == [("error", {"message": evs[0][1]["message"]})]
+    assert evs[0][1]["message"].startswith("No proof of shipping on file")
+
+
 def test_a_verified_message_cannot_be_sent_as_the_reply():
     fresh = TestClient(create_app(FakePayPal(), agents=fake_agents, gate=DemoGate(None, 30)))
     fresh.get("/api/disputes/PP-R-FOD-10194708/message-draft")

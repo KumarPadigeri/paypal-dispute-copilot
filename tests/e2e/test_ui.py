@@ -136,6 +136,7 @@ def test_case_without_tracking_gets_advice_not_a_draft(page: Page):
     page.goto("/#/case/PP-R-TEST-00000002")
     expect(page.locator(".advice h3")).to_have_text("No proof of shipping on file")
     expect(page.get_by_role("button", name="Draft reply")).to_be_disabled()
+    expect(page.get_by_role("button", name="Draft message")).to_have_count(0)
     # The recommended (first) resolution is the blue button.
     expect(page.get_by_role("button", name="Refund the buyer now")).to_have_class("btn primary")
     page.get_by_role("button", name="Refund the buyer now").click()

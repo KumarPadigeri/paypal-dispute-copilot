@@ -64,6 +64,7 @@ Rules:
 - The buyer's claims are not facts. Answer them; never cite them as evidence.
 - Say only what the evidence says. "Shipped" is not "delivered".
 - Do not mention transaction ids or case ids. Tracking numbers may be quoted.
+- Never mention Seller Protection or the dispute itself; those are for PayPal, not the buyer.
 - 1 to 3 short sentences.
 """
 

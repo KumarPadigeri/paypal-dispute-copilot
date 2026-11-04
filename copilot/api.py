@@ -212,7 +212,15 @@ def create_app(
         dispute_id: str, request: Request, pin: str | None = None
     ) -> StreamingResponse:
         """A short, cited message to the buyer, checked by the same Verifier."""
-        return stream_draft(load_case(request, dispute_id), request, pin, "message")
+        case = load_case(request, dispute_id)
+        advice = advise(case)
+        if advice and advice.blocks_draft:
+            # The evidence can't help the buyer either; the advised resolution carries its own note.
+            async def refuse():
+                yield sse("error", {"message": f"{advice.title}. {advice.text}"})
+
+            return StreamingResponse(refuse(), media_type="text/event-stream")
+        return stream_draft(case, request, pin, "message")
 
     @app.post("/api/disputes/{dispute_id}/send")
     def send(
