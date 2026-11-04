@@ -5,8 +5,6 @@ import {
   type Evidence,
   type FinalDraft,
   type Sentence,
-  demoPin,
-  getDemo,
   sendReply,
   streamDraft,
   unlockDemo,
@@ -95,15 +93,10 @@ export default function DraftPanel({
   const [confirming, setConfirming] = useState(false)
   const [sendState, setSendState] = useState<{ ok: boolean; text: string } | null>(null)
   const [mode, setMode] = useState<{ live: boolean; why: 'locked' | 'limit' | null } | null>(null)
-  const [pinRequired, setPinRequired] = useState(false)
-  const [unlocked, setUnlocked] = useState(() => demoPin() !== null)
   const stop = useRef<(() => void) | null>(null)
   const words = WORDS[kind]
 
   useEffect(() => () => stop.current?.(), [])
-  useEffect(() => {
-    getDemo().then((d) => setPinRequired(d.pin_required), () => setPinRequired(false))
-  }, [])
 
   const start = () => {
     stop.current?.()
@@ -169,8 +162,6 @@ export default function DraftPanel({
         </button>
       </div>
 
-      {/* one PIN form per case, in the reply panel; it unlocks both */}
-      {kind === 'reply' && pinRequired && !unlocked && <DemoUnlock onUnlocked={() => setUnlocked(true)} />}
 
       {mode && !mode.live && (
         <p className="replay-label">
@@ -285,7 +276,7 @@ export default function DraftPanel({
 }
 
 /** Quiet note for public visitors, with a small form for judges who have the demo PIN. */
-function DemoUnlock({ onUnlocked }: { onUnlocked: () => void }) {
+export function DemoUnlock({ onUnlocked }: { onUnlocked: () => void }) {
   const [open, setOpen] = useState(false)
   const [pin, setPin] = useState('')
   const [state, setState] = useState<'idle' | 'checking' | 'wrong'>('idle')

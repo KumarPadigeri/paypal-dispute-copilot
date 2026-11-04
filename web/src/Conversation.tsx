@@ -1,5 +1,6 @@
 import { type KeyboardEvent, type ReactNode, useEffect, useState } from 'react'
-import { type CaseDetail, formatDateTime } from './api'
+import { type CaseDetail, demoPin, formatDateTime, getDemo } from './api'
+import { DemoUnlock } from './DraftPanel'
 
 const WHO = { buyer: 'Buyer', you: 'You', paypal: 'PayPal' } as const
 type Channel = 'paypal' | 'buyer'
@@ -40,6 +41,12 @@ type Props = {
 export default function Conversations({ c, reply, message }: Props) {
   const waiting = c.status === 'WAITING_FOR_SELLER_RESPONSE'
   const [tab, setTab] = useState<Channel>(waiting ? 'paypal' : 'buyer')
+  // Public demo: one PIN form above both tabs (it unlocks live AI and sending in either)
+  const [pinRequired, setPinRequired] = useState(false)
+  const [unlocked, setUnlocked] = useState(() => demoPin() !== null)
+  useEffect(() => {
+    getDemo().then((d) => setPinRequired(d.pin_required), () => setPinRequired(false))
+  }, [])
   // A dot on "With the buyer" only for buyer messages newer than the last one you saw there
   const latestBuyer = c.conversation
     .filter((e) => e.channel === 'buyer' && e.who === 'buyer' && e.time)
@@ -68,6 +75,7 @@ export default function Conversations({ c, reply, message }: Props) {
       <h3 className="section-title" id="conversations-title">
         Conversations
       </h3>
+      {pinRequired && !unlocked && <DemoUnlock onUnlocked={() => setUnlocked(true)} />}
       <div className="convo-tabs" role="tablist" aria-label="Conversations" onKeyDown={onKey}>
         {CHANNELS.map(({ key, label }) => (
           <button

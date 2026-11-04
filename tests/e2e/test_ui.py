@@ -652,6 +652,7 @@ def test_conversations_are_two_tabs_each_a_chat_with_its_composer(page: Page):
     page.keyboard.press("ArrowRight")
     expect(buyer_tab).to_be_focused()
     expect(buyer_tab).to_have_attribute("aria-selected", "true")
+    expect(page.locator(".demo-note")).to_be_visible()  # the PIN form serves both tabs
     with_buyer = page.get_by_role("list", name="With the buyer, oldest first")
     expect(with_buyer.locator(".chat-line.buyer")).to_contain_text(
         "Their message is above, as C1–C4."
