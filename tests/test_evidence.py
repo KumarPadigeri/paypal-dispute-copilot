@@ -148,7 +148,21 @@ def test_conversation_lists_buyer_seller_and_paypal_in_time_order():
             "amount_refunded": {"currency_code": "USD", "value": "64.00"},
         },
     }
-    events = conversation(d)
+    d["create_time"] = "2026-10-28T18:59:00Z"
+    d["reason"] = "MERCHANDISE_OR_SERVICE_NOT_RECEIVED"
+    opened, *events = conversation(d)
+    assert (opened["channel"], opened["title"]) == (
+        "paypal",
+        "The buyer opened a case with PayPal: Item not received",
+    )
+    assert [e["channel"] for e in events] == [
+        "buyer",
+        "paypal",
+        "paypal",
+        "buyer",
+        "buyer",
+        "paypal",
+    ]
     assert [(e["who"], e["title"]) for e in events] == [
         ("buyer", "Buyer opened the case"),
         ("paypal", "PayPal asked you for proof of shipping"),

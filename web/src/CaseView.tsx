@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import Deadline from './Deadline'
-import Conversation from './Conversation'
+import Conversations from './Conversation'
 import DraftPanel from './DraftPanel'
 import { CaseSkeleton } from './Skeleton'
 import { AlertIcon, CheckIcon, CloseIcon, CopyIcon } from './icons'
@@ -145,20 +145,21 @@ export default function CaseView({ id, onClose }: { id: string; onClose: () => v
               <p className="hint">Claims are answered, never used as proof.</p>
             </section>
 
-            <DraftPanel
-              disputeId={c.dispute_id}
-              evidence={c.evidence}
-              canSend={canSend}
-              cantSendReason={cantSendReason}
-              draftBlocked={c.advice?.blocks_draft ?? false}
-              onFocus={setFocus}
-              onSent={changed}
-            />
-
-            {/* messaging the buyer happens at the bottom of the conversation, like a chat */}
-            <Conversation
+            {/* the two conversations, each with its composer: the reply to PayPal, the message to the buyer */}
+            <Conversations
               c={c}
-              composer={
+              reply={
+                <DraftPanel
+                  disputeId={c.dispute_id}
+                  evidence={c.evidence}
+                  canSend={canSend}
+                  cantSendReason={cantSendReason}
+                  draftBlocked={c.advice?.blocks_draft ?? false}
+                  onFocus={setFocus}
+                  onSent={changed}
+                />
+              }
+              message={
                 canMessage && (
                   <DraftPanel
                     kind="message"

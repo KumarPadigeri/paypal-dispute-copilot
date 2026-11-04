@@ -152,9 +152,22 @@ OUTCOMES = {
 }
 
 
-def _event(who: str, time: str | None, title: str, text: str | None = None, kind="action") -> dict:
-    """kind: "message" (a chat line), "action" (an offer, evidence, a refund) or "note" (PayPal)."""
-    return {"who": who, "time": time, "title": title, "text": text, "kind": kind}
+def _event(
+    who: str, time: str | None, title: str, text: str | None = None, kind="action", channel="buyer"
+) -> dict:
+    """kind: "message" (a chat line), "action" (an offer, evidence, a refund) or "note" (PayPal).
+
+    channel: "buyer" (you and the buyer: messages, offers) or "paypal" (you and PayPal: what it
+    asked for, the evidence and refunds you sent it, its decision).
+    """
+    return {
+        "who": who,
+        "time": time,
+        "title": title,
+        "text": text,
+        "kind": kind,
+        "channel": channel,
+    }
 
 
 def conversation(d: dict) -> list[dict]:
@@ -162,8 +175,18 @@ def conversation(d: dict) -> list[dict]:
 
     who: "buyer", "you" (the seller) or "paypal". Plain code; nothing here is written by the AI.
     The buyer's opening message is marked `opening` (the page shows it as claims C1, C2, ...).
+    Each event belongs to one of two channels (see _event): with the buyer, or with PayPal.
     """
-    events: list[dict] = []
+    reason = REASONS.get(d.get("reason", ""), d.get("reason"))
+    events: list[dict] = [
+        _event(
+            "paypal",
+            d.get("create_time"),
+            "The buyer opened a case with PayPal" + (f": {reason}" if reason else ""),
+            kind="note",
+            channel="paypal",
+        )
+    ]
     offers = {o.get("offer_time"): o for o in (d.get("offer") or {}).get("history", [])}
     first_buyer = True
     for m in d.get("messages", []):
@@ -201,7 +224,13 @@ def conversation(d: dict) -> list[dict]:
         if source == "REQUESTED_FROM_SELLER":
             asked = ASKED_FOR.get(ev.get("evidence_type", ""), "evidence")
             events.append(
-                _event("paypal", ev.get("date"), f"PayPal asked you for {asked}", kind="note")
+                _event(
+                    "paypal",
+                    ev.get("date"),
+                    f"PayPal asked you for {asked}",
+                    kind="note",
+                    channel="paypal",
+                )
             )
         elif source == "SUBMITTED_BY_SELLER":
             action = (ev.get("action_info") or {}).get("action")
@@ -214,9 +243,8 @@ def conversation(d: dict) -> list[dict]:
                     if tracking.get("tracking_number")
                     else ""
                 )
-            events.append(
-                _event("you", ev.get("date"), title, (ev.get("notes") or "").strip() or None)
-            )
+            notes = (ev.get("notes") or "").strip() or None
+            events.append(_event("you", ev.get("date"), title, notes, channel="paypal"))
     outcome = d.get("dispute_outcome")
     if outcome:
         how = OUTCOMES.get(outcome.get("outcome_code", ""), "")
@@ -224,7 +252,7 @@ def conversation(d: dict) -> list[dict]:
         title = "PayPal closed the case" + (f" {how}" if how else "")
         if refunded:
             title += f" ({money(refunded)} refunded)"
-        events.append(_event("paypal", d.get("update_time"), title, kind="note"))
+        events.append(_event("paypal", d.get("update_time"), title, kind="note", channel="paypal"))
     return sorted(events, key=lambda e: e["time"] or "")
 
 

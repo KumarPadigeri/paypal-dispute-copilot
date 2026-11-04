@@ -21,7 +21,7 @@ type Step = { key: string; tone: 'run' | 'ok' | 'bad' | 'info'; text: string; de
 const WORDS = {
   reply: {
     noun: 'reply',
-    title: 'Your reply',
+    title: 'Write to PayPal',
     intro:
       "The Writer drafts from PayPal's evidence only. The Verifier then checks every sentence and removes anything the evidence does not prove. Nothing is sent until you approve.",
     send: 'Approve & send to PayPal',
@@ -99,7 +99,6 @@ export default function DraftPanel({
   const [unlocked, setUnlocked] = useState(() => demoPin() !== null)
   const stop = useRef<(() => void) | null>(null)
   const words = WORDS[kind]
-  const Wrapper = kind === 'message' ? 'div' : 'section'
 
   useEffect(() => () => stop.current?.(), [])
   useEffect(() => {
@@ -155,8 +154,9 @@ export default function DraftPanel({
   }
 
   return (
-    // The reply is a card of its own; the message composer sits inside the conversation card
-    <Wrapper className={kind === 'message' ? 'composer draft' : 'panel draft'}>
+    // A composer at the bottom of its conversation: the reply under "With PayPal", the message
+    // under "With the buyer"
+    <div className="composer draft">
       <div className="draft-head">
         <h3 className="section-title">{words.title}</h3>
         {/* Blue while drafting the reply is the next step; once a draft exists, sending is. The
@@ -281,7 +281,7 @@ export default function DraftPanel({
           </div>
         </>
       )}
-    </Wrapper>
+    </div>
   )
 }
 

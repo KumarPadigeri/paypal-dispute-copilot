@@ -109,7 +109,8 @@ def test_without_pin_draft_is_a_replay_and_cannot_be_sent(page: Page):
 
 def test_message_to_the_buyer_is_a_cited_replay_without_pin(page: Page):
     page.goto("/#/case/PP-R-FOD-10194708")
-    panel = page.locator(".panel.conversation .chat-composer")
+    page.get_by_role("tab", name="With the buyer").click()
+    panel = page.locator("#panel-buyer .chat-composer")
     draft = panel.get_by_role("button", name="Draft message")
     expect(draft).to_have_class("btn")  # the reply stays the blue, main task
     draft.click()
@@ -630,16 +631,31 @@ def test_agent_stepper_shows_every_step_done_after_a_draft(page: Page):
     expect(steps.locator(".stage", has_text="Ready")).to_have_class(re.compile(r"\bdone\b"))
 
 
-def test_conversation_is_a_chat_with_the_message_composer_at_the_bottom(page: Page):
+def test_conversations_are_two_tabs_each_a_chat_with_its_composer(page: Page):
     page.goto("/#/case/PP-R-FOD-10194708")
-    chat = page.get_by_role("list", name="Conversation, oldest first")
-    buyer = chat.locator(".chat-line.buyer")
-    expect(buyer).to_have_count(1)
-    expect(buyer.locator(".chat-meta")).to_contain_text("Buyer")
-    expect(buyer).to_contain_text("Their message is above, as C1–C4.")
-    expect(chat.locator(".chat-note")).to_contain_text("PayPal asked you for proof of shipping")
-    # the composer belongs to the conversation card, under the thread
-    card = page.locator(".panel.conversation")
+    paypal = page.get_by_role("tab", name="With PayPal")
+    # PayPal waits for this seller, so its conversation opens first and says so
+    expect(paypal).to_have_attribute("aria-selected", "true")
+    expect(paypal).to_contain_text("Needs reply")
+    with_paypal = page.get_by_role("list", name="With PayPal, oldest first")
+    expect(with_paypal.locator(".chat-note").first).to_contain_text(
+        "The buyer opened a case with PayPal: Item not received"
+    )
+    expect(with_paypal).to_contain_text("PayPal asked you for proof of shipping")
     expect(
-        card.locator(".chat-composer").get_by_role("button", name="Draft message")
+        page.locator("#panel-paypal .chat-composer").get_by_role("button", name="Draft reply")
     ).to_be_visible()
+    # arrow keys move between the tabs
+    paypal.focus()
+    page.keyboard.press("ArrowRight")
+    buyer_tab = page.get_by_role("tab", name="With the buyer")
+    expect(buyer_tab).to_be_focused()
+    expect(buyer_tab).to_have_attribute("aria-selected", "true")
+    with_buyer = page.get_by_role("list", name="With the buyer, oldest first")
+    expect(with_buyer.locator(".chat-line.buyer")).to_contain_text(
+        "Their message is above, as C1–C4."
+    )
+    expect(
+        page.locator("#panel-buyer .chat-composer").get_by_role("button", name="Draft message")
+    ).to_be_visible()
+    expect(page.get_by_role("button", name="Draft reply")).to_be_hidden()  # the other tab is hidden

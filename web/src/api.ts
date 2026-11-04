@@ -81,6 +81,7 @@ export type CaseDetail = {
   conversation: {
     who: 'buyer' | 'you' | 'paypal'
     kind: 'message' | 'action' | 'note' // a chat line, an offer/evidence/refund, or a PayPal event
+    channel: 'paypal' | 'buyer' // which conversation it belongs to
     time: string | null
     title: string
     text: string | null
