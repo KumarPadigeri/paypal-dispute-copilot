@@ -578,3 +578,14 @@ def test_columns_menu_hides_a_column_and_reset_brings_the_layout_back(browser, b
     pg.get_by_role("button", name="Reset layout").click()
     expect(stage).to_have_count(1)
     context.close()
+
+
+def test_header_tabs_name_both_screens_and_mark_the_current_one(page: Page):
+    page.goto("/")
+    tabs = page.get_by_role("navigation", name="Screens")
+    expect(tabs.get_by_role("link", name="Disputes")).to_have_attribute("aria-current", "page")
+    tabs.get_by_role("link", name="Insights").click()
+    expect(page.get_by_role("heading", name="Insights")).to_be_visible()
+    expect(tabs.get_by_role("link", name="Insights")).to_have_attribute("aria-current", "page")
+    tabs.get_by_role("link", name="Disputes").click()
+    expect(page.locator(".list .row").first).to_be_visible()

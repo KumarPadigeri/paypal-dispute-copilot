@@ -102,6 +102,71 @@ button {
   letter-spacing: -0.01em;
 }
 
+/* Disputes | Insights: quiet text tabs; the current screen sits on a soft fill */
+.tabs {
+  display: flex;
+  gap: 2px;
+  margin-left: 16px;
+}
+
+.tabs a {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--muted);
+  text-decoration: none;
+}
+
+.tabs a:hover {
+  color: var(--text);
+  background: var(--surface-2);
+}
+
+.tabs a.on {
+  color: var(--text);
+  font-weight: 600;
+  background: var(--surface-2);
+}
+
+.tabs a:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+@media (max-width: 600px) {
+  .topbar {
+    gap: 8px;
+  }
+
+  .topbar h1 {
+    font-size: 15px;
+    white-space: nowrap;
+  }
+
+  .tabs {
+    margin-left: 0;
+  }
+
+  .tabs a {
+    padding: 6px 8px;
+    font-size: 13px;
+  }
+
+  .tabs svg,
+  .topbar .tag {
+    display: none;
+  }
+
+  /* the theme toggle keeps the right edge */
+  .topbar > :last-child {
+    margin-left: auto;
+  }
+}
+
 .topbar .tag {
   margin-left: auto;
   white-space: nowrap;

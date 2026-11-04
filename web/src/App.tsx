@@ -96,16 +96,17 @@ export default function App() {
       <header className="topbar">
         <img src="/favicon.svg?v=2" alt="" />
         <h1>Dispute Copilot</h1>
+        {/* The app's two screens, named, so neither is hidden behind an icon */}
+        <nav className="tabs" aria-label="Screens">
+          <a href="#" className={insights ? '' : 'on'} aria-current={insights ? undefined : 'page'}>
+            Disputes
+          </a>
+          <a href="#/insights" className={insights ? 'on' : ''} aria-current={insights ? 'page' : undefined}>
+            <ChartIcon />
+            Insights
+          </a>
+        </nav>
         <span className="tag">PayPal sandbox</span>
-        <a
-          className={`icon-btn ${insights ? 'on' : ''}`}
-          href={insights ? '#' : '#/insights'}
-          aria-label={insights ? 'Back to disputes' : 'Insights'}
-          aria-current={insights ? 'page' : undefined}
-          data-tip={insights ? 'Back to disputes' : 'Insights'}
-        >
-          <ChartIcon />
-        </a>
         <ThemeToggle />
       </header>
       {/* No case open: list uses the full width. Case open: list left, case panel right
