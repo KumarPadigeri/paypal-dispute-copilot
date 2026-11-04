@@ -1,4 +1,4 @@
-import { type KeyboardEvent, type ReactNode, useState } from 'react'
+import { type KeyboardEvent, type ReactNode, useEffect, useState } from 'react'
 import { type CaseDetail, formatDateTime } from './api'
 
 const WHO = { buyer: 'Buyer', you: 'You', paypal: 'PayPal' } as const
@@ -7,6 +7,23 @@ const CHANNELS: { key: Channel; label: string }[] = [
   { key: 'paypal', label: 'With PayPal' },
   { key: 'buyer', label: 'With the buyer' },
 ]
+
+// The last buyer message you have seen on each case, kept in this browser (works without storage)
+const seenKey = (id: string) => `seenBuyer:${id}`
+function lastSeen(id: string): string {
+  try {
+    return localStorage.getItem(seenKey(id)) ?? ''
+  } catch {
+    return ''
+  }
+}
+function markSeen(id: string, time: string) {
+  try {
+    localStorage.setItem(seenKey(id), time)
+  } catch {
+    /* private mode: the dot comes back next visit */
+  }
+}
 
 type Props = {
   c: CaseDetail
@@ -23,7 +40,20 @@ type Props = {
 export default function Conversations({ c, reply, message }: Props) {
   const waiting = c.status === 'WAITING_FOR_SELLER_RESPONSE'
   const [tab, setTab] = useState<Channel>(waiting ? 'paypal' : 'buyer')
-  const events = (ch: Channel) => c.conversation.filter((e) => e.channel === ch)
+  // A dot on "With the buyer" only for buyer messages newer than the last one you saw there
+  const latestBuyer = c.conversation
+    .filter((e) => e.channel === 'buyer' && e.who === 'buyer' && e.time)
+    .map((e) => e.time!)
+    .sort()
+    .at(-1)
+  const [seen, setSeen] = useState(() => lastSeen(c.dispute_id))
+  const unseen = !!latestBuyer && latestBuyer > seen
+  useEffect(() => {
+    if (tab === 'buyer' && unseen && latestBuyer) {
+      markSeen(c.dispute_id, latestBuyer)
+      setSeen(latestBuyer)
+    }
+  }, [tab, unseen, latestBuyer, c.dispute_id])
 
   // Arrow keys move between the tabs (the ARIA tabs pattern)
   const onKey = (e: KeyboardEvent) => {
@@ -52,10 +82,8 @@ export default function Conversations({ c, reply, message }: Props) {
             onClick={() => setTab(key)}
           >
             {label}
-            {key === 'paypal' && waiting ? (
-              <span className="convo-badge warn">Needs reply</span>
-            ) : (
-              <span className="convo-badge">{events(key).length}</span>
+            {key === 'buyer' && unseen && (
+              <span className="convo-dot" aria-label="new message" role="img" />
             )}
           </button>
         ))}

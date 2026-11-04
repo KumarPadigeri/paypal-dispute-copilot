@@ -159,10 +159,9 @@ export default function DraftPanel({
     <div className="composer draft">
       <div className="draft-head">
         <h3 className="section-title">{words.title}</h3>
-        {/* Blue while drafting the reply is the next step; once a draft exists, sending is. The
-            message is the secondary task, so its button stays plain. */}
+        {/* Blue while drafting is the next step in this tab; once a draft exists, sending is */}
         <button
-          className={final || draftBlocked || kind === 'message' ? 'btn' : 'btn primary'}
+          className={final || draftBlocked ? 'btn' : 'btn primary'}
           onClick={start}
           disabled={running || draftBlocked}
         >

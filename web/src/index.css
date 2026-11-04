@@ -503,8 +503,8 @@ button {
   color: var(--faint);
 }
 
-/* The two conversations as underline tabs: the current one in the accent color, each with a
-   small count, or "Needs reply" (amber) while PayPal waits for you */
+/* The two conversations as underline tabs: the current one in the accent color; a dot on
+   "With the buyer" when they wrote something you haven't seen */
 .convo-tabs {
   display: flex;
   gap: 4px;
@@ -544,19 +544,12 @@ button {
   border-radius: 6px 6px 0 0;
 }
 
-.convo-badge {
-  padding: 0 7px;
-  border-radius: 999px;
-  font-size: 11.5px;
-  font-weight: 600;
-  line-height: 18px;
-  color: var(--muted);
-  background: var(--surface-2);
-}
-
-.convo-badge.warn {
-  color: var(--warn);
-  background: var(--warn-soft);
+/* a new buyer message you haven't opened yet */
+.convo-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--accent);
 }
 
 /* Conversation as a chat: the buyer on the left, you on the right, PayPal's events as small

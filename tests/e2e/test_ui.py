@@ -112,7 +112,7 @@ def test_message_to_the_buyer_is_a_cited_replay_without_pin(page: Page):
     page.get_by_role("tab", name="With the buyer").click()
     panel = page.locator("#panel-buyer .chat-composer")
     draft = panel.get_by_role("button", name="Draft message")
-    expect(draft).to_have_class("btn")  # the reply stays the blue, main task
+    expect(draft).to_have_class("btn primary")  # the main action of its tab
     draft.click()
     expect(panel.get_by_text("Verified message ready for your review")).to_be_visible(timeout=15000)
     expect(panel.locator(".sentence").first).to_contain_text("tracking number")
@@ -636,7 +636,9 @@ def test_conversations_are_two_tabs_each_a_chat_with_its_composer(page: Page):
     paypal = page.get_by_role("tab", name="With PayPal")
     # PayPal waits for this seller, so its conversation opens first and says so
     expect(paypal).to_have_attribute("aria-selected", "true")
-    expect(paypal).to_contain_text("Needs reply")
+    buyer_tab = page.get_by_role("tab", name="With the buyer")
+    # the buyer's message is new to this browser: a dot, until that tab is opened
+    expect(buyer_tab.get_by_role("img", name="new message")).to_be_visible()
     with_paypal = page.get_by_role("list", name="With PayPal, oldest first")
     expect(with_paypal.locator(".chat-note").first).to_contain_text(
         "The buyer opened a case with PayPal: Item not received"
@@ -648,7 +650,6 @@ def test_conversations_are_two_tabs_each_a_chat_with_its_composer(page: Page):
     # arrow keys move between the tabs
     paypal.focus()
     page.keyboard.press("ArrowRight")
-    buyer_tab = page.get_by_role("tab", name="With the buyer")
     expect(buyer_tab).to_be_focused()
     expect(buyer_tab).to_have_attribute("aria-selected", "true")
     with_buyer = page.get_by_role("list", name="With the buyer, oldest first")
@@ -659,3 +660,6 @@ def test_conversations_are_two_tabs_each_a_chat_with_its_composer(page: Page):
         page.locator("#panel-buyer .chat-composer").get_by_role("button", name="Draft message")
     ).to_be_visible()
     expect(page.get_by_role("button", name="Draft reply")).to_be_hidden()  # the other tab is hidden
+    expect(buyer_tab.get_by_role("img", name="new message")).to_have_count(0)  # now seen
+    page.reload()
+    expect(page.get_by_role("tab", name="With the buyer").get_by_role("img")).to_have_count(0)
