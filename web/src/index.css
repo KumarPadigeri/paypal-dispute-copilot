@@ -21,6 +21,14 @@
   --bad-soft: rgba(178, 56, 56, 0.08);
   --lit: rgba(45, 91, 168, 0.1);
   --link: #0b57d0;
+  /* Chart fills (Insights), checked with the data-viz palette validator against each mode's card:
+     red = act now (overdue or due in 2 days), amber = due this week, blue = due later and the
+     one-series charts, grey = waiting on the buyer or PayPal (nothing to do). Every bar is also
+     labelled, so color never carries the meaning alone. */
+  --chart-bad: #d03b3b;
+  --chart-warn: #eda100;
+  --chart-info: #2a78d6;
+  --chart-muted: #898781;
   color-scheme: light;
   --radius: 10px;
 
@@ -53,6 +61,11 @@
   --bad-soft: rgba(227, 154, 154, 0.12);
   --lit: rgba(143, 176, 232, 0.14);
   --link: #8ab4f8;
+  /* the same hues, stepped for the dark card */
+  --chart-bad: #d03b3b;
+  --chart-warn: #c98500;
+  --chart-info: #3987e5;
+  --chart-muted: #898781;
   color-scheme: dark;
 }
 

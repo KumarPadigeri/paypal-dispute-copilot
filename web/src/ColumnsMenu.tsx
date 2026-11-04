@@ -2,7 +2,7 @@ import { useEffect, useReducer, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import type { Column, GridApi } from 'ag-grid-community'
 import { ColumnsIcon } from './icons'
-import { FIXED_COLS, resetLayout } from './gridLayout'
+import { FIXED_COLS, resetLayout, saveLayout } from './gridLayout'
 import { usePopup } from './popup'
 
 /**
@@ -57,6 +57,7 @@ export default function ColumnsMenu({ api }: { api: GridApi }) {
                     disabled={c.isVisible() && shown === 1}
                     onChange={(e) => {
                       api.setColumnsVisible([c], e.target.checked)
+                      saveLayout(api.getState()) // at once: the grid's own save comes a moment later
                       redraw() // the grid applies it at once; redraw now, so the box never flips back
                     }}
                   />

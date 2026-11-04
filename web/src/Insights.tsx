@@ -14,7 +14,8 @@ function useThemeColors() {
       text: v('--text'),
       muted: v('--muted'),
       border: v('--border'),
-      tone: { warn: v('--warn'), info: v('--accent'), ok: v('--ok'), muted: v('--faint'), bad: v('--bad') },
+      // fills made for charts (see index.css), not the text tones, so bars look alike in both modes
+      tone: { bad: v('--chart-bad'), warn: v('--chart-warn'), info: v('--chart-info'), muted: v('--chart-muted') },
     }
   }
   const [colors, setColors] = useState(read)
@@ -158,7 +159,7 @@ export default function Insights() {
               xKey: 'label',
               yKey: 'amount',
               yName: 'Amount',
-              cornerRadius: 3,
+              cornerRadius: 4,
               itemStyler: (p: { datum: { tone: string } }) => ({ fill: toneFill(p.datum.tone) }),
               cursor: 'pointer',
               listeners: { nodeClick: (e: { datum: { key: string } }) => go(drillHref('due', e.datum.key))() },
@@ -185,7 +186,7 @@ export default function Insights() {
               yKey: 'amount',
               yName: 'Amount',
               fill: colors.tone.info,
-              cornerRadius: 3,
+              cornerRadius: 4,
               cursor: 'pointer',
               listeners: { nodeClick: (e: { datum: { reason: string } }) => go(drillHref('reason', e.datum.reason))() },
               label: { formatter: (p: { datum: { amount: number; count: number } }) => `${money(p.datum.amount)} · ${cases(p.datum.count)}`, placement: 'outside-end', color: colors.text },
