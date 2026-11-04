@@ -14,7 +14,7 @@ import { type Drill, drillFromHash, drillLabel, drillMatches } from './drill'
 import Dashboard from './Dashboard'
 import Welcome from './Welcome'
 import { CloseIcon, SearchIcon } from './icons'
-import { ListSkeleton } from './Skeleton'
+import { FiltersSkeleton, ListSkeleton, TilesSkeleton } from './Skeleton'
 import StatusPill from './StatusPill'
 import { GROUPS, type Group, statusOf } from './status'
 
@@ -203,7 +203,16 @@ export default function DisputeList({ openId, asTable, onOpen, onExport, onGrid,
   }, [])
 
   if (error) return <div className="notice error">Could not load disputes from PayPal ({error}).</div>
-  if (!disputes) return <ListSkeleton asTable={asTable} />
+  // While PayPal loads: the same shapes as the page that follows (banner, tiles, chips), so nothing jumps
+  if (!disputes)
+    return (
+      <>
+        {!openId && <Welcome onOpen={onOpen} />}
+        {!openId && <TilesSkeleton />}
+        <FiltersSkeleton />
+        <ListSkeleton asTable={asTable} />
+      </>
+    )
 
   // PayPal's full reason list (in PayPal's order), plus any reason a case has that the list lacks.
   const reasons = [...new Set([...allReasons, ...disputes.map((d) => d.reason)])]

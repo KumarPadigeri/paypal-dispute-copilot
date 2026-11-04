@@ -21,7 +21,14 @@ export default function ThemeToggle() {
   }
 
   return (
-    <button className="icon-btn" onClick={pick} aria-label={`Switch to ${next} theme`}>
+    // Named after the theme it switches to, like the view toggle ("Grid View")
+    <button
+      className="icon-btn"
+      onClick={pick}
+      aria-label={`Switch to ${next} theme`}
+      data-tip={next === 'dark' ? 'Dark Theme' : 'Light Theme'}
+      data-tip-align="end"
+    >
       {theme === 'dark' ? <SunIcon /> : <MoonIcon />}
     </button>
   )

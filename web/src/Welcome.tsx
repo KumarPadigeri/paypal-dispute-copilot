@@ -47,7 +47,12 @@ export default function Welcome({ first, onOpen }: { first?: DisputeSummary; onO
           Try it on the {formatMoney(first.amount)} case
         </button>
       )}
-      <button className="icon-btn small welcome-close" onClick={dismiss} aria-label="Dismiss welcome">
+      <button
+        className="icon-btn small welcome-close"
+        onClick={dismiss} aria-label="Dismiss welcome"
+        data-tip="Dismiss"
+        data-tip-align="end"
+      >
         <CloseIcon />
       </button>
     </section>

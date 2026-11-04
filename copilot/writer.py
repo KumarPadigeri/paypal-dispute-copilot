@@ -122,15 +122,6 @@ def sentence_problems(s: Sentence, case: DisputeCase) -> list[str]:
     return problems
 
 
-def check_citations(draft: Draft, case: DisputeCase) -> list[str]:
-    """Problems a human must never see in a sent reply. Empty list = all good."""
-    return [
-        f"Sentence {i} {p}: {s.text!r}"
-        for i, s in enumerate(draft.sentences, start=1)
-        for p in sentence_problems(s, case)
-    ]
-
-
 def answered_claims(draft: Draft) -> set[str]:
     return {a for s in draft.sentences for a in s.answers}
 

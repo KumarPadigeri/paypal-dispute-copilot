@@ -123,7 +123,7 @@ export function ListSkeleton({ asTable }: { asTable: boolean }) {
 }
 
 /** The three summary tiles (Needs reply, Next deadline, At stake), shimmering. */
-function TilesSkeleton() {
+export function TilesSkeleton() {
   return (
     <section className="dashboard" aria-hidden="true">
       {['44px', '120px', '96px'].map((w) => (
@@ -169,6 +169,22 @@ export function InsightsSkeleton() {
           </div>
         ))}
       </div>
+    </div>
+  )
+}
+
+/** The status chips (centred) and the full-width search under them. */
+export function FiltersSkeleton() {
+  return (
+    <div className="filters" aria-hidden="true">
+      <div className="filters-bar">
+        <div className="chips">
+          {['118px', '96px', '100px'].map((w) => (
+            <Line key={w} w={w} h={30} />
+          ))}
+        </div>
+      </div>
+      <span className="sk" style={{ height: 38, borderRadius: 8 }} />
     </div>
   )
 }

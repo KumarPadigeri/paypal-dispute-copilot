@@ -39,7 +39,6 @@ class PayPalClient:
         if "sandbox" not in base_url:
             raise ValueError("Only the PayPal sandbox is allowed")
         self._auth = (client_id, secret)
-        self._base_url = base_url
         self._http = httpx.Client(base_url=base_url, timeout=30)
         self._token: str | None = None
         self._toolkit = _Toolkit(client_id, secret)

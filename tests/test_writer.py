@@ -8,8 +8,8 @@ from copilot.writer import (
     Sentence,
     answered_claims,
     build_prompt,
-    check_citations,
     render,
+    sentence_problems,
     split_claims,
 )
 
@@ -33,27 +33,21 @@ def test_prompt_has_evidence_and_claims_but_no_raw_paypal_ids():
     assert "example.com" not in p
 
 
-def test_check_citations_accepts_a_fully_cited_draft():
-    draft = Draft(
-        sentences=[
-            Sentence(text="The buyer paid 49.99 USD.", cites=["E1"]),
-            Sentence(text="The item was shipped via USPS.", cites=["E4"]),
-        ]
-    )
-    assert check_citations(draft, case()) == []
+def test_fully_cited_sentences_have_no_problems():
+    for s in [
+        Sentence(text="The buyer paid 49.99 USD.", cites=["E1"]),
+        Sentence(text="The item was shipped via USPS.", cites=["E4"]),
+    ]:
+        assert sentence_problems(s, case()) == []
 
 
-def test_check_citations_flags_missing_and_unknown_ids():
-    draft = Draft(
-        sentences=[
-            Sentence(text="We always ship fast.", cites=[]),
-            Sentence(text="It was delivered.", cites=["E9"]),
-        ]
-    )
-    problems = check_citations(draft, case())
-    assert len(problems) == 2
-    assert "cites no evidence" in problems[0]
-    assert "unknown evidence E9" in problems[1]
+def test_missing_and_unknown_evidence_ids_are_flagged():
+    assert sentence_problems(Sentence(text="We always ship fast.", cites=[]), case()) == [
+        "cites no evidence"
+    ]
+    assert sentence_problems(Sentence(text="It was delivered.", cites=["E9"]), case()) == [
+        "cites unknown evidence E9"
+    ]
 
 
 def test_render_joins_sentences_without_citations():
@@ -71,16 +65,11 @@ def test_buyer_message_is_split_into_numbered_claims():
     assert 'C2: "It has not arrived' in build_prompt(case())
 
 
-def test_check_citations_flags_ids_in_text_and_unknown_claims():
-    draft = Draft(
-        sentences=[
-            Sentence(text='It shipped via USPS. ["E4"]', cites=["E4"]),
-            Sentence(text="A tracking number exists.", cites=["E4"], answers=["C9"]),
-        ]
-    )
-    problems = check_citations(draft, case())
-    assert any("id in its text" in p for p in problems)
-    assert any("unknown claim C9" in p for p in problems)
+def test_ids_in_text_and_unknown_claims_are_flagged():
+    with_id = Sentence(text='It shipped via USPS. ["E4"]', cites=["E4"])
+    unknown = Sentence(text="A tracking number exists.", cites=["E4"], answers=["C9"])
+    assert sentence_problems(with_id, case()) == ["has an id in its text"]
+    assert sentence_problems(unknown, case()) == ["answers unknown claim C9"]
 
 
 def test_answered_claims_collects_claim_ids():
