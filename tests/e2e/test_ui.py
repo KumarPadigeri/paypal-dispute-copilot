@@ -589,3 +589,16 @@ def test_header_tabs_name_both_screens_and_mark_the_current_one(page: Page):
     expect(tabs.get_by_role("link", name="Insights")).to_have_attribute("aria-current", "page")
     tabs.get_by_role("link", name="Disputes").click()
     expect(page.locator(".list .row").first).to_be_visible()
+
+
+def test_insights_shows_a_skeleton_while_paypal_loads(page: Page):
+    def slow(route):
+        time.sleep(1.5)
+        route.continue_()
+
+    page.route("**/api/disputes", slow)
+    page.goto("/#/insights")
+    expect(page.locator(".insights [aria-busy=true] .sk").first).to_be_visible()
+    expect(page.get_by_role("status")).to_have_text("Loading Insights…")
+    expect(page.locator(".insight-links").first).to_be_visible(timeout=10000)
+    expect(page.locator(".insights [aria-busy=true]")).to_have_count(0)

@@ -121,3 +121,54 @@ export function ListSkeleton({ asTable }: { asTable: boolean }) {
     </div>
   )
 }
+
+/** The three summary tiles (Needs reply, Next deadline, At stake), shimmering. */
+function TilesSkeleton() {
+  return (
+    <section className="dashboard" aria-hidden="true">
+      {['44px', '120px', '96px'].map((w) => (
+        <div key={w} className="tile">
+          <span className="tile-text">
+            <Line w="88px" h={10} />
+            <Line w={w} h={24} />
+          </span>
+          <span className="sk tile-icon" />
+        </div>
+      ))}
+    </section>
+  )
+}
+
+/** Insights while its code or PayPal's data loads: the tiles and two chart cards, bars and links. */
+export function InsightsSkeleton() {
+  return (
+    <div aria-busy="true">
+      <span className="sr-only" role="status">
+        Loading Insights…
+      </span>
+      <TilesSkeleton />
+      <div className="insight-grid" aria-hidden="true">
+        {[
+          ['70%', '45%'],
+          ['85%', '40%'],
+        ].map((bars, i) => (
+          <div key={i} className="insight">
+            <Line w="45%" h={10} />
+            <div className="insight-chart sk-bars">
+              {bars.map((w) => (
+                <span key={w} className="sk-item">
+                  <Line w="96px" />
+                  <Line w={w} h={28} />
+                </span>
+              ))}
+            </div>
+            <span className="sk-stack tight">
+              <Line w="80%" />
+              <Line w="65%" />
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}

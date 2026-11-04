@@ -3,6 +3,7 @@ import type { GridApi } from 'ag-grid-community'
 import CaseView from './CaseView'
 import ColumnsMenu from './ColumnsMenu'
 import DisputeList from './DisputeList'
+import { InsightsSkeleton } from './Skeleton'
 import Splitter, { LIST_DEFAULT } from './Splitter'
 import ThemeToggle from './ThemeToggle'
 import ViewToggle from './ViewToggle'
@@ -115,7 +116,17 @@ export default function App() {
           users can jump straight to the content and nothing sits outside a landmark. */}
       {insights ? (
         <main className="insights-page" id="main" tabIndex={-1}>
-          <Suspense fallback={<p className="muted">Loading Insights…</p>}>
+          {/* same title and shapes as the loaded page, so nothing moves when it arrives */}
+          <Suspense
+            fallback={
+              <section className="insights">
+                <div className="insights-head">
+                  <h2>Insights</h2>
+                </div>
+                <InsightsSkeleton />
+              </section>
+            }
+          >
             <Insights />
           </Suspense>
         </main>

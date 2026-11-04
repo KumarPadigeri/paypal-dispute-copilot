@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import type { AgChartOptions } from 'ag-charts-community'
 import { AgCharts } from 'ag-charts-react'
 import Dashboard from './Dashboard'
+import { InsightsSkeleton } from './Skeleton'
 import { type DisputeSummary, formatMoney, listDisputes } from './api'
 import { BUCKETS, bucketOf, drillHref } from './drill'
 
@@ -209,7 +210,7 @@ export default function Insights() {
       </div>
       {error && <div className="notice error">Could not load disputes from PayPal ({error}).</div>}
       {disputes && <Dashboard disputes={disputes} />}
-      {!disputes && !error && <p className="muted">Loading…</p>}
+      {!disputes && !error && <InsightsSkeleton />}
       {charts && (
         <div className="insight-grid">
           {charts.map((c) => (
