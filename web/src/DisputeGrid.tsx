@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import ColumnsMenu from './ColumnsMenu'
 import DayFilter from './DayFilter'
 import { CloseIcon } from './icons'
 import {
@@ -57,7 +58,7 @@ ModuleRegistry.registerModules([
   ...(import.meta.env.DEV ? [ValidationModule] : []),
 ])
 
-// The seller's column order, widths, pinning and sort, remembered in this browser
+// The seller's column order, widths, pinning, sort and hidden columns, remembered in this browser
 const STATE_KEY = 'gridLayout'
 const CLEAR_COL = 'clearFilters'
 function savedLayout(): GridState | undefined {
@@ -68,9 +69,12 @@ function savedLayout(): GridState | undefined {
   }
 }
 function saveLayout(state: GridState) {
-  const { columnOrder, columnSizing, columnPinning, sort } = state
+  const { columnOrder, columnSizing, columnPinning, sort, columnVisibility } = state
   try {
-    localStorage.setItem(STATE_KEY, JSON.stringify({ columnOrder, columnSizing, columnPinning, sort }))
+    localStorage.setItem(
+      STATE_KEY,
+      JSON.stringify({ columnOrder, columnSizing, columnPinning, sort, columnVisibility }),
+    )
   } catch {
     /* private mode: layout lasts this visit only */
   }
@@ -316,7 +320,21 @@ export default function DisputeGrid({ items, reasons, search, page, pageSize, op
     () => [
       {
         colId: CLEAR_COL,
-        headerName: 'Clear filters', // read by screen readers; hidden on screen (see index.css)
+        headerName: 'Columns',
+        // the top-left corner: show or hide columns, reset the layout
+        headerComponent: ColumnsMenu,
+        headerComponentParams: {
+          fixed: [CLEAR_COL, 'id'],
+          onReset: () => {
+            api.current?.resetColumnState()
+            try {
+              localStorage.removeItem(STATE_KEY)
+            } catch {
+              /* nothing saved */
+            }
+          },
+        },
+        suppressHeaderKeyboardEvent: (p) => p.event.key === 'Enter' || p.event.key === ' ',
         width: 44,
         minWidth: 44,
         maxWidth: 44,
@@ -352,7 +370,10 @@ export default function DisputeGrid({ items, reasons, search, page, pageSize, op
         // Only the case id opens a case (a real button: works with mouse and keyboard)
         cellRenderer: (p: ICellRendererParams<DisputeSummary>) =>
           p.node.rowPinned ? (
-            <span className="grid-total">{p.value}</span>
+            <span className="grid-total">
+              <span className="grid-total-label">Total</span>
+              {String(p.value).split(' · ')[1]}
+            </span>
           ) : (
             p.data && (
             <button

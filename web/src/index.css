@@ -1861,14 +1861,34 @@ th[aria-sort] .th-sort {
   justify-content: center;
 }
 
-/* Totals row (pinned under the rows): count and money left by the filters */
+/* Totals row (pinned under the rows): count and money left by the filters. Shaded, with a
+   strong rule above it, so it reads as a summary of the rows, not one more dispute. */
+.grid-wrap .ag-floating-bottom {
+  border-top: 2px solid var(--border-strong);
+}
+
+.grid-wrap .ag-floating-bottom .ag-row {
+  background: var(--surface-2);
+}
+
 .grid-wrap .ag-floating-bottom .ag-cell {
   font-weight: 600;
 }
 
 .grid-total {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 8px;
   color: var(--text);
   font-weight: 600;
+}
+
+.grid-total-label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
 }
 
 /* Reply due soon: a colored edge on the row's first cell (red at 2 days or fewer, amber at 5) */
@@ -2101,14 +2121,50 @@ th[aria-sort] .th-sort {
   padding-inline: 8px;
 }
 
-/* The clear-all column's header is named for screen readers only */
-.grid-wrap .ag-header-cell[col-id='clearFilters'] .ag-header-cell-text {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  overflow: hidden;
-  clip: rect(0 0 0 0);
-  white-space: nowrap;
+/* The top-left corner: the Columns menu button, centred; its popup reuses the calendar's card */
+.grid-wrap .ag-header-cell[col-id='clearFilters'] {
+  padding: 0;
+  justify-content: center;
+}
+
+.grid-columns {
+  flex: none;
+}
+
+.columns-popup {
+  min-width: 200px;
+}
+
+.columns-popup fieldset {
+  border: 0;
+  margin: 0;
+  padding: 0;
+}
+
+.columns-popup legend {
+  padding: 0;
+  margin-bottom: 6px;
+}
+
+.columns-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 2px;
+  font-size: 13.5px;
+  cursor: pointer;
+}
+
+.columns-item input {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  accent-color: var(--accent);
+}
+
+.columns-reset {
+  width: 100%;
+  margin-top: 8px;
 }
 
 /* Date filters: a calendar button with the picked day, and a calendar popup in our colors */

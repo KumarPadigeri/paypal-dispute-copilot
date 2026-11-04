@@ -546,11 +546,35 @@ def test_grid_totals_follow_the_filters_and_urgent_rows_are_marked(browser, base
     pg.clock.set_fixed_time("2026-11-14T12:00:00Z")  # both cases are due in under 2 days
     pg.goto("/")
     total = pg.locator(".ag-floating-bottom")  # pinned Case part + the rest
-    expect(total).to_contain_text("Total · 2 disputes")
+    expect(total.locator(".grid-total-label")).to_have_text("Total")  # a summary row, labelled
+    expect(total).to_contain_text("2 disputes")
     expect(total).to_contain_text("$84.99")
     pg.get_by_role("textbox", name="Amount filter").fill("49")
-    expect(total).to_contain_text("Total · 1 dispute")
+    expect(total).to_contain_text("1 dispute")
     expect(total).to_contain_text("$49.99")
     edge = ".ag-pinned-left-cols-container .ag-row.due-bad"
     expect(pg.locator(edge)).to_have_count(1)
+    context.close()
+
+
+def test_columns_menu_hides_a_column_and_reset_brings_the_layout_back(browser, base_url):
+    context = browser.new_context(base_url=base_url, viewport={"width": 1366, "height": 768})
+    context.add_init_script(LIST_VIEW)
+    pg = context.new_page()
+    pg.goto("/")
+    stage = pg.locator(".ag-header-cell[col-id='stage']")
+    expect(stage).to_have_count(1)
+    pg.get_by_role("button", name="Show or hide columns").click()
+    menu = pg.get_by_role("dialog", name="Columns")
+    expect(menu.get_by_role("checkbox", name="Case")).to_have_count(0)  # the case id always stays
+    menu.get_by_role("checkbox", name="Stage").uncheck()
+    expect(stage).to_have_count(0)
+    pg.keyboard.press("Escape")
+    expect(menu).to_have_count(0)
+    pg.reload()  # hidden columns are remembered
+    expect(pg.locator(GRID_ROWS).first).to_be_visible()
+    expect(stage).to_have_count(0)
+    pg.get_by_role("button", name="Show or hide columns").click()
+    pg.get_by_role("button", name="Reset layout").click()
+    expect(stage).to_have_count(1)
     context.close()
