@@ -1,0 +1,185 @@
+{
+ "recorded": "2026-11-04T17:20:17+00:00",
+ "events": [
+  {
+   "t": 0.0,
+   "name": "writing",
+   "data": {
+    "round": 1
+   }
+  },
+  {
+   "t": 2.27,
+   "name": "draft",
+   "data": {
+    "round": 1,
+    "sentences": [
+     {
+      "text": "USPS tracking number 9400111899562104783215 shows your Walnut Cutting Board was shipped, so you can check the parcel yourself.",
+      "cites": [
+       "E4",
+       "E2"
+      ],
+      "answers": [
+       "C1"
+      ]
+     },
+     {
+      "text": "PayPal's records show the shipment and the case opening happened on the same day.",
+      "cites": [
+       "E6",
+       "E5"
+      ],
+      "answers": [
+       "C1"
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "t": 2.27,
+   "name": "verifying",
+   "data": {
+    "round": 1
+   }
+  },
+  {
+   "t": 3.87,
+   "name": "verdicts",
+   "data": {
+    "round": 1,
+    "verdicts": [
+     {
+      "sentence": "USPS tracking number 9400111899562104783215 shows your Walnut Cutting Board was shipped, so you can check the parcel yourself.",
+      "supported": false,
+      "reason": "The evidence says the item was shipped and gives the tracking number, but not that it \"shows your Walnut Cutting Board\" or that \"you can check the parcel yourself.\""
+     },
+     {
+      "sentence": "PayPal's records show the shipment and the case opening happened on the same day.",
+      "supported": true,
+      "reason": null
+     }
+    ]
+   }
+  },
+  {
+   "t": 3.87,
+   "name": "rewriting",
+   "data": {
+    "round": 2,
+    "rejected": 1
+   }
+  },
+  {
+   "t": 5.29,
+   "name": "draft",
+   "data": {
+    "round": 2,
+    "sentences": [
+     {
+      "text": "Your order was shipped via USPS with tracking number 9400111899562104783215, and PayPal shows the tracking status as SHIPPED.",
+      "cites": [
+       "E4"
+      ],
+      "answers": [
+       "C1"
+      ]
+     },
+     {
+      "text": "The order contained 1 Walnut Cutting Board.",
+      "cites": [
+       "E2"
+      ],
+      "answers": [
+       "C1"
+      ]
+     },
+     {
+      "text": "PayPal's records date the shipment and the case opening on the same day, Nov 2, 2026 UTC.",
+      "cites": [
+       "E6",
+       "E5"
+      ],
+      "answers": [
+       "C1"
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "t": 5.29,
+   "name": "verifying",
+   "data": {
+    "round": 2
+   }
+  },
+  {
+   "t": 7.0,
+   "name": "verdicts",
+   "data": {
+    "round": 2,
+    "verdicts": [
+     {
+      "sentence": "Your order was shipped via USPS with tracking number 9400111899562104783215, and PayPal shows the tracking status as SHIPPED.",
+      "supported": true,
+      "reason": null
+     },
+     {
+      "sentence": "The order contained 1 Walnut Cutting Board.",
+      "supported": true,
+      "reason": null
+     },
+     {
+      "sentence": "PayPal's records date the shipment and the case opening on the same day, Nov 2, 2026 UTC.",
+      "supported": true,
+      "reason": null
+     }
+    ]
+   }
+  },
+  {
+   "t": 7.0,
+   "name": "final",
+   "data": {
+    "sentences": [
+     {
+      "text": "Your order was shipped via USPS with tracking number 9400111899562104783215, and PayPal shows the tracking status as SHIPPED.",
+      "cites": [
+       "E4"
+      ],
+      "answers": [
+       "C1"
+      ]
+     },
+     {
+      "text": "The order contained 1 Walnut Cutting Board.",
+      "cites": [
+       "E2"
+      ],
+      "answers": [
+       "C1"
+      ]
+     },
+     {
+      "text": "PayPal's records date the shipment and the case opening on the same day, Nov 2, 2026 UTC.",
+      "cites": [
+       "E6",
+       "E5"
+      ],
+      "answers": [
+       "C1"
+      ]
+     }
+    ],
+    "removed": [],
+    "rounds": 2,
+    "answered": [
+     "C1"
+    ],
+    "reply": "Your order was shipped via USPS with tracking number 9400111899562104783215, and PayPal shows the tracking status as SHIPPED. The order contained 1 Walnut Cutting Board. PayPal's records date the shipment and the case opening on the same day, Nov 2, 2026 UTC."
+   }
+  }
+ ]
+}

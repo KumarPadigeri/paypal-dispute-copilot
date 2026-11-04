@@ -1,0 +1,127 @@
+{
+ "recorded": "2026-11-04T17:20:06+00:00",
+ "events": [
+  {
+   "t": 0.0,
+   "name": "writing",
+   "data": {
+    "round": 1
+   }
+  },
+  {
+   "t": 2.32,
+   "name": "draft",
+   "data": {
+    "round": 1,
+    "sentences": [
+     {
+      "text": "The order for 1 Walnut Cutting Board was marked shipped via USPS on Nov 2, 2026, with tracking number 9400111899562104783215.",
+      "cites": [
+       "E2",
+       "E4"
+      ],
+      "answers": [
+       "C1"
+      ]
+     },
+     {
+      "text": "PayPal's records date the shipment and the case opening on the same day, Nov 2, 2026.",
+      "cites": [
+       "E5",
+       "E6"
+      ],
+      "answers": []
+     },
+     {
+      "text": "This payment is marked eligible for Expanded Seller Protection.",
+      "cites": [
+       "E3"
+      ],
+      "answers": []
+     }
+    ]
+   }
+  },
+  {
+   "t": 2.32,
+   "name": "verifying",
+   "data": {
+    "round": 1
+   }
+  },
+  {
+   "t": 4.11,
+   "name": "verdicts",
+   "data": {
+    "round": 1,
+    "verdicts": [
+     {
+      "sentence": "The order for 1 Walnut Cutting Board was marked shipped via USPS on Nov 2, 2026, with tracking number 9400111899562104783215.",
+      "supported": true,
+      "reason": null
+     },
+     {
+      "sentence": "PayPal's records date the shipment and the case opening on the same day, Nov 2, 2026.",
+      "supported": true,
+      "reason": null
+     },
+     {
+      "sentence": "This payment is marked eligible for Expanded Seller Protection.",
+      "supported": true,
+      "reason": null
+     }
+    ]
+   }
+  },
+  {
+   "t": 4.11,
+   "name": "final",
+   "data": {
+    "sentences": [
+     {
+      "text": "The order for 1 Walnut Cutting Board was marked shipped via USPS on Nov 2, 2026, with tracking number 9400111899562104783215.",
+      "cites": [
+       "E2",
+       "E4"
+      ],
+      "answers": [
+       "C1"
+      ]
+     },
+     {
+      "text": "PayPal's records date the shipment and the case opening on the same day, Nov 2, 2026.",
+      "cites": [
+       "E5",
+       "E6"
+      ],
+      "answers": []
+     },
+     {
+      "text": "This payment is marked eligible for Expanded Seller Protection.",
+      "cites": [
+       "E3"
+      ],
+      "answers": []
+     },
+     {
+      "text": "Based on this evidence, we ask PayPal to close the case in the seller's favor.",
+      "cites": [
+       "E2",
+       "E3",
+       "E4",
+       "E5",
+       "E6"
+      ],
+      "answers": []
+     }
+    ],
+    "removed": [],
+    "rounds": 1,
+    "answered": [
+     "C1"
+    ],
+    "reply": "The order for 1 Walnut Cutting Board was marked shipped via USPS on Nov 2, 2026, with tracking number 9400111899562104783215. PayPal's records date the shipment and the case opening on the same day, Nov 2, 2026. This payment is marked eligible for Expanded Seller Protection. Based on this evidence, we ask PayPal to close the case in the seller's favor."
+   }
+  }
+ ]
+}
