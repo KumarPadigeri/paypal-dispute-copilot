@@ -756,6 +756,25 @@ button {
   overflow-wrap: anywhere;
 }
 
+/* A panel's title with a short muted note at the right of the same row */
+.panel-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 4px 12px;
+  margin-bottom: 12px;
+}
+
+.panel-head .section-title {
+  margin: 0;
+}
+
+.panel-note {
+  font-size: 12px;
+  color: var(--faint);
+}
+
 .hint {
   color: var(--faint);
   font-size: 12px;
@@ -1763,6 +1782,13 @@ h2[tabindex='-1']:focus,
     scrollbar-gutter: stable both-edges;
   }
 
+  /* The case panel's scroll room (gutter + padding, 22px) would double its gap to the screen's
+     right edge; it reaches into the page margin instead, so the content's right gap equals the
+     list's left gap */
+  .layout.has-case .case-pane {
+    margin-right: -22px;
+  }
+
   .table-wrap + .list-footer {
     margin-top: 0;
     margin-bottom: 12px;
@@ -1815,9 +1841,11 @@ h2[tabindex='-1']:focus,
     padding: 2px 0 0 2px;
   }
 
+  /* inset like the body below it (its scrollbar room + 2px), so the case id and close button
+     line up with the cards' edges */
   .case-pane .pane-bar {
     flex: none;
-    padding-right: 2px;
+    padding-inline: 13px;
   }
 
   .case-body {
@@ -1825,10 +1853,12 @@ h2[tabindex='-1']:focus,
     min-height: 0;
     overflow-y: auto;
     overscroll-behavior: contain;
-    scrollbar-gutter: stable;
+    /* the scrollbar's room on both sides, so the content sits centred (macOS hides the bar, which
+       left an empty strip on the right only) */
+    scrollbar-gutter: stable both-edges;
     scrollbar-width: thin;
     scrollbar-color: var(--border-strong) transparent;
-    padding: 0 2px 32px 0;
+    padding: 0 2px 32px;
   }
 
   .evidence-panel {

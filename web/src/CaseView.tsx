@@ -132,7 +132,11 @@ export default function CaseView({ id, onClose }: { id: string; onClose: () => v
         <div className="columns">
           <div className="stack">
             <section className="panel">
-              <h3 className="section-title">What the buyer says</h3>
+              {/* the rule about claims rides in the title row, so it costs no line of its own */}
+              <div className="panel-head">
+                <h3 className="section-title">What the buyer says</h3>
+                <span className="panel-note">Answered, never used as proof</span>
+              </div>
               {c.claims.length === 0 && <p className="meta">The buyer left no message.</p>}
               <ol className="items">
                 {c.claims.map((cl) => (
@@ -142,7 +146,6 @@ export default function CaseView({ id, onClose }: { id: string; onClose: () => v
                   </li>
                 ))}
               </ol>
-              <p className="hint">Claims are answered, never used as proof.</p>
             </section>
 
             {/* the two conversations, each with its composer: the reply to PayPal, the message to the buyer */}

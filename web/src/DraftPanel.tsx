@@ -23,14 +23,14 @@ const WORDS = {
     noun: 'reply',
     title: 'Write to PayPal',
     intro:
-      "The Writer drafts from PayPal's evidence only. The Verifier then checks every sentence and removes anything the evidence does not prove. Nothing is sent until you approve.",
+      'Every sentence cites PayPal evidence; the Verifier removes the rest. Nothing is sent until you approve.',
     send: 'Approve & send to PayPal',
   },
   message: {
     noun: 'message',
     title: 'Write to the buyer',
     intro:
-      'A short note to the buyer, such as where their parcel is. Same rule: every sentence cites PayPal evidence, the Verifier checks it, and you approve before it goes.',
+      'A short note, cited and checked the same way. You approve before it goes.',
     send: 'Approve & send to buyer',
   },
 }
