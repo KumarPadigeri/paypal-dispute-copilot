@@ -148,6 +148,7 @@ def test_wrong_pin_is_refused_and_right_pin_unlocks(page: Page):
     page.goto("/#/case/PP-R-FOD-10194708")
     page.get_by_role("button", name="Have a demo PIN? Unlock live AI").click()
     page.get_by_placeholder("Demo PIN").fill("0000")
+    expect(page.get_by_role("button", name="Unlock", exact=True)).to_have_class("btn primary")
     page.get_by_role("button", name="Unlock").click()
     expect(page.get_by_role("alert")).to_have_text("That PIN didn't work.")
     page.get_by_placeholder("Demo PIN").fill(PIN)
@@ -515,6 +516,12 @@ def test_welcome_opens_the_first_case_and_stays_dismissed(page: Page):
     page.goto("/")
     welcome = page.get_by_role("region", name="Welcome")
     expect(welcome).to_contain_text("AI that answers PayPal disputes, with proof")
+    # its close button sits on the banner's middle line
+    box, x = (
+        welcome.bounding_box(),
+        page.get_by_role("button", name="Dismiss welcome").bounding_box(),
+    )
+    assert abs((x["y"] + x["height"] / 2) - (box["y"] + box["height"] / 2)) <= 1
     welcome.get_by_role("button", name="Try it on the $49.99 case").click()
     expect(page.locator(".case-head h2")).to_have_text("Item not received")
     page.keyboard.press("Escape")
@@ -602,3 +609,33 @@ def test_insights_shows_a_skeleton_while_paypal_loads(page: Page):
     expect(page.get_by_role("status")).to_have_text("Loading Insights…")
     expect(page.locator(".insight-links").first).to_be_visible(timeout=10000)
     expect(page.locator(".insights [aria-busy=true]")).to_have_count(0)
+
+
+def test_agent_stepper_shows_every_step_done_after_a_draft(page: Page):
+    page.goto("/#/case/PP-R-FOD-10194708")
+    page.get_by_role("button", name="Draft reply").click()
+    steps = page.get_by_role("list", name="Agent steps")
+    expect(steps).to_be_visible()
+    expect(page.get_by_text("Verified reply ready for your review")).to_be_visible(timeout=15000)
+    labels = steps.locator(".stage-label").all_inner_texts()
+    assert [t.split("\n")[0] for t in labels] == [
+        "Evidence",
+        "Writer",
+        "Verifier",
+        "Rewrite",
+        "Ready",
+    ]
+    expect(steps.locator(".stage.now")).to_have_count(0)  # nothing left running
+    expect(steps.locator(".stage", has_text="Ready")).to_have_class(re.compile(r"\bdone\b"))
+
+
+def test_conversation_shows_who_did_what_and_points_to_the_claims(page: Page):
+    page.goto("/#/case/PP-R-FOD-10194708")
+    convo = page.locator(".convo")
+    expect(convo.locator(".convo-item")).to_have_count(2)
+    first = convo.locator(".convo-item").first
+    expect(first.locator(".convo-who")).to_have_text("Buyer")
+    expect(first).to_contain_text("Their message is above, as C1–C4.")
+    expect(convo.locator(".convo-item").nth(1)).to_contain_text(
+        "PayPal asked you for proof of shipping"
+    )

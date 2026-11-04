@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import Deadline from './Deadline'
+import Conversation from './Conversation'
 import DraftPanel from './DraftPanel'
 import { CaseSkeleton } from './Skeleton'
 import { AlertIcon, CheckIcon, CloseIcon, CopyIcon } from './icons'
@@ -166,6 +167,8 @@ export default function CaseView({ id, onClose }: { id: string; onClose: () => v
                 onSent={changed}
               />
             )}
+
+            <Conversation c={c} />
           </div>
 
           <section className="panel evidence-panel">

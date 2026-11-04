@@ -94,3 +94,70 @@ class FakePayPal:
 def test_gather_case_fetches_trackers_for_the_seller_transaction():
     case = gather_case(FakePayPal(), "PP-R-FOD-10194708")
     assert any("USPS" in e.text for e in case.evidence)
+
+
+def test_conversation_lists_buyer_seller_and_paypal_in_time_order():
+    from copilot.evidence import conversation
+
+    d = {
+        "update_time": "2026-10-28T19:47:00Z",
+        "messages": [
+            {
+                "posted_by": "BUYER",
+                "time_posted": "2026-10-28T19:00:00Z",
+                "content": "Never arrived.",
+            },
+            {"posted_by": "SELLER", "time_posted": "2026-10-28T19:30:00Z", "content": "Return it."},
+            {"posted_by": "BUYER", "time_posted": "2026-10-28T19:40:00Z", "content": "OK."},
+        ],
+        "offer": {
+            "history": [
+                {
+                    "offer_time": "2026-10-28T19:30:00Z",
+                    "actor": "SELLER",
+                    "event_type": "PROPOSED",
+                    "offer_type": "REFUND_WITH_RETURN",
+                    "offer_amount": {"currency_code": "USD", "value": "64.00"},
+                }
+            ]
+        },
+        "evidences": [
+            {
+                "source": "SUBMITTED_BY_BUYER",
+                "evidence_type": "CREATE",
+                "date": "2026-10-28T19:00:00Z",
+            },
+            {
+                "source": "REQUESTED_FROM_SELLER",
+                "evidence_type": "PROOF_OF_FULFILLMENT",
+                "date": "2026-10-28T19:05:00Z",
+            },
+            {
+                "source": "SUBMITTED_BY_SELLER",
+                "evidence_type": "PROOF_OF_FULFILLMENT",
+                "date": "2026-10-28T19:20:00Z",
+                "notes": "Shipped via UPS.",
+                "evidence_info": {
+                    "tracking_info": [{"carrier_name": "UPS", "tracking_number": "1Z9"}]
+                },
+                "action_info": {"action": "PROVIDE_EVIDENCE"},
+            },
+        ],
+        "dispute_outcome": {
+            "outcome_code": "RESOLVED_BUYER_FAVOUR",
+            "amount_refunded": {"currency_code": "USD", "value": "64.00"},
+        },
+    }
+    events = conversation(d)
+    assert [(e["who"], e["title"]) for e in events] == [
+        ("buyer", "Buyer opened the case"),
+        ("paypal", "PayPal asked you for proof of shipping"),
+        ("you", "You sent evidence to PayPal: UPS tracking 1Z9"),
+        ("you", "You offered a refund after return of 64.00 USD"),
+        ("buyer", "Buyer wrote"),
+        ("paypal", "PayPal closed the case in the buyer's favor (64.00 USD refunded)"),
+    ]
+    assert events[0]["opening"] is True and events[4]["opening"] is False
+    assert events[2]["text"] == "Shipped via UPS."
+    # the buyer's own copy of their opening message (SUBMITTED_BY_BUYER) is not listed twice
+    assert sum(e["who"] == "buyer" for e in events) == 2

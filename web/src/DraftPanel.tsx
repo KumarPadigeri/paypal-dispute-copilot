@@ -11,6 +11,8 @@ import {
   streamDraft,
   unlockDemo,
 } from './api'
+import AgentSteps from './AgentSteps'
+import { type Progress, START, advance } from './agentProgress'
 import { statusOf } from './status'
 
 type Step = { key: string; tone: 'run' | 'ok' | 'bad' | 'info'; text: string; detail?: string[] }
@@ -86,6 +88,7 @@ export default function DraftPanel({
   onSent,
 }: Props) {
   const [steps, setSteps] = useState<Step[]>([])
+  const [progress, setProgress] = useState<Progress>(START)
   const [running, setRunning] = useState(false)
   const [final, setFinal] = useState<FinalDraft | null>(null)
   const [focused, setFocused] = useState<number | null>(null)
@@ -105,6 +108,7 @@ export default function DraftPanel({
   const start = () => {
     stop.current?.()
     setSteps([])
+    setProgress(START)
     setFinal(null)
     setFocused(null)
     onFocus(null)
@@ -116,8 +120,9 @@ export default function DraftPanel({
       disputeId,
       (e) => {
         if (e.name === 'mode') setMode(e.data)
+        setProgress((p) => advance(p, e))
         const step = stepFor(e, words.noun)
-      // A finished "…ing" step is replaced by its result, so the timeline reads as done.
+        // A finished "…ing" step is replaced by its result, so the timeline reads as done.
         if (step) setSteps((prev) => [...prev.filter((s) => s.tone !== 'run'), step])
         if (e.name === 'final') setFinal(e.data)
         if (e.name === 'final' || e.name === 'error') setRunning(false)
@@ -174,6 +179,9 @@ export default function DraftPanel({
       )}
 
       {steps.length === 0 && !draftBlocked && <p className="meta">{words.intro}</p>}
+
+      {/* where the agents are, and what comes next; the log below says what each step found */}
+      {steps.length > 0 && <AgentSteps progress={progress} />}
 
       {steps.length > 0 && (
         <ol className="timeline" aria-live="polite">
@@ -304,7 +312,7 @@ function DemoUnlock({ onUnlocked }: { onUnlocked: () => void }) {
             onChange={(e) => setPin(e.target.value)}
             autoFocus
           />
-          <button className="btn" disabled={!pin.trim() || state === 'checking'}>
+          <button className="btn primary" disabled={!pin.trim() || state === 'checking'}>
             {state === 'checking' ? 'Checking…' : 'Unlock'}
           </button>
           {state === 'wrong' && (

@@ -25,6 +25,10 @@
      red = act now (overdue or due in 2 days), amber = due this week, blue = due later and the
      one-series charts, grey = waiting on the buyer or PayPal (nothing to do). Every bar is also
      labelled, so color never carries the meaning alone. */
+  /* success: the evidence check's "you have what PayPal asks for" */
+  --success: #1a7f37;
+  --success-soft: rgba(26, 127, 55, 0.08);
+  --success-line: rgba(26, 127, 55, 0.35);
   --chart-bad: #d03b3b;
   --chart-warn: #eda100;
   --chart-info: #2a78d6;
@@ -62,6 +66,9 @@
   --lit: rgba(143, 176, 232, 0.14);
   --link: #8ab4f8;
   /* the same hues, stepped for the dark card */
+  --success: #3fb950;
+  --success-soft: rgba(63, 185, 80, 0.12);
+  --success-line: rgba(63, 185, 80, 0.4);
   --chart-bad: #d03b3b;
   --chart-warn: #c98500;
   --chart-info: #3987e5;
@@ -331,10 +338,12 @@ button {
   flex: none;
 }
 
-.welcome-close {
+/* centred on the banner's height, like the case panel's close button on its bar */
+.welcome .welcome-close {
   position: absolute;
-  top: 8px;
-  right: 8px;
+  top: 50%;
+  right: 12px;
+  transform: translateY(-50%);
 }
 
 @media (max-width: 600px) {
@@ -345,6 +354,12 @@ button {
 
   .welcome-steps {
     flex-direction: column;
+  }
+
+  /* the banner stacks tall here, so its close button sits in the top corner */
+  .welcome .welcome-close {
+    top: 10px;
+    transform: none;
   }
 }
 
@@ -359,17 +374,19 @@ button {
   border-radius: 8px;
   font-size: 13.5px;
   color: var(--text);
-  background: var(--ok-soft);
+  background: var(--success-soft);
+  border: 1px solid var(--success-line);
 }
 
 .evidence-check svg {
   flex: none;
   margin-top: 2px;
-  color: var(--ok);
+  color: var(--success);
 }
 
 .evidence-check.warn {
   background: var(--warn-soft);
+  border-color: var(--warn);
 }
 
 .evidence-check.warn svg {
@@ -484,6 +501,107 @@ button {
 .stage-date {
   font-size: 11px;
   color: var(--faint);
+}
+
+/* Conversation: who (a small tag), what and when, oldest first; a line joins the entries */
+.convo {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.convo-item {
+  display: grid;
+  grid-template-columns: 64px minmax(0, 1fr);
+  gap: 10px;
+  align-items: start;
+}
+
+.convo-who {
+  justify-self: start;
+  padding: 1px 8px;
+  border-radius: 999px;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--muted);
+  background: var(--surface-2);
+}
+
+.convo-who.you {
+  color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.convo-who.paypal {
+  color: var(--text);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+}
+
+.convo-body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.convo-title {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.convo-time {
+  font-size: 12px;
+  color: var(--faint);
+}
+
+.convo-text {
+  margin-top: 4px;
+  font-size: 13.5px;
+  overflow-wrap: anywhere;
+}
+
+/* The draft panel's agent stepper: the stage stepper's look, left-aligned, wrapping in a
+   narrow panel; the running step's dot pulses (still under "reduce motion") */
+.agent-steps {
+  grid-column: auto;
+  justify-content: flex-start;
+  flex-wrap: wrap;
+  row-gap: 8px;
+  margin: 4px 0 12px;
+}
+
+.agent-steps .stage + .stage::before {
+  width: 16px;
+  margin: 0 6px;
+}
+
+.agent-steps .stage.now .stage-dot {
+  animation: agent-pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes agent-pulse {
+  50% {
+    box-shadow: 0 0 0 5px var(--accent-soft);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .agent-steps .stage.now .stage-dot {
+    animation: none;
+  }
+}
+
+.stage.failed .stage-dot {
+  border-color: var(--bad);
+}
+
+.stage.failed .stage-label {
+  color: var(--bad);
+  font-weight: 600;
 }
 
 .columns {

@@ -77,6 +77,8 @@ export type CaseDetail = {
   claims: Claim[]
   actions: string[]
   shipments: { carrier: string; tracking_number: string; status: string | null }[]
+  // The case's history from PayPal's records, oldest first: buyer, seller ("you") and PayPal
+  conversation: { who: 'buyer' | 'you' | 'paypal'; time: string | null; title: string; text: string | null; opening?: boolean }[]
   // What PayPal asks for against what its records hold (plain code); null when the advice covers it
   check: { tone: 'ok' | 'warn'; text: string } | null
   advice: {

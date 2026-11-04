@@ -56,6 +56,8 @@ class DisputeCase:
     opened_iso: str | None = None
     updated_iso: str | None = None
     protection: str | None = None  # Seller Protection the payment is eligible for, in plain words
+    # what the buyer, the seller and PayPal did on the case, oldest first (see conversation())
+    conversation: list[dict] = field(default_factory=list)
 
 
 def money(m: dict) -> str:
@@ -137,6 +139,91 @@ def evidence_from_dispute(d: dict, trackers: list[dict] | None = None) -> list[E
     return [Evidence(f"E{i}", text, source) for i, (text, source) in enumerate(facts, start=1)]
 
 
+ASKED_FOR = {
+    "PROOF_OF_FULFILLMENT": "proof of shipping",
+    "PROOF_OF_REFUND": "proof of refund",
+    "PROOF_OF_DELIVERY_SIGNATURE": "a delivery signature",
+    "ITEM_DESCRIPTION": "an item description",
+}
+OFFERS = {"REFUND_WITH_RETURN": "a refund after return", "REFUND": "a refund"}
+OUTCOMES = {
+    "RESOLVED_BUYER_FAVOUR": "in the buyer's favor",
+    "RESOLVED_SELLER_FAVOUR": "in your favor",
+}
+
+
+def _event(who: str, time: str | None, title: str, text: str | None = None) -> dict:
+    return {"who": who, "time": time, "title": title, "text": text}
+
+
+def conversation(d: dict) -> list[dict]:
+    """The case's history from PayPal's own records: who did what, when, oldest first.
+
+    who: "buyer", "you" (the seller) or "paypal". Plain code; nothing here is written by the AI.
+    The buyer's opening message is marked `opening` (the page shows it as claims C1, C2, ...).
+    """
+    events: list[dict] = []
+    offers = {o.get("offer_time"): o for o in (d.get("offer") or {}).get("history", [])}
+    first_buyer = True
+    for m in d.get("messages", []):
+        text = (m.get("content") or "").strip()
+        if m.get("posted_by") == "BUYER":
+            e = _event(
+                "buyer",
+                m.get("time_posted"),
+                "Buyer opened the case" if first_buyer else "Buyer wrote",
+                text,
+            )
+            e["opening"] = first_buyer
+            first_buyer = False
+        else:
+            offer = offers.pop(m.get("time_posted"), None)
+            kind = OFFERS.get((offer or {}).get("offer_type", ""), "a resolution")
+            amount = (offer or {}).get("offer_amount")
+            title = (
+                f"You offered {kind}" + (f" of {money(amount)}" if amount else "")
+                if offer
+                else "You messaged the buyer"
+            )
+            e = _event("you", m.get("time_posted"), title, text)
+        events.append(e)
+    for o in offers.values():  # offer events with no message of their own (e.g. the buyer's answer)
+        who = "buyer" if o.get("actor") == "BUYER" else "you"
+        verb = {"ACCEPTED": "accepted", "DENIED": "declined"}.get(
+            o.get("event_type", ""), "updated"
+        )
+        title = f"Buyer {verb} your offer" if who == "buyer" else f"You {verb} the offer"
+        events.append(_event(who, o.get("offer_time"), title))
+    for ev in d.get("evidences", []):
+        source = ev.get("source")
+        if source == "REQUESTED_FROM_SELLER":
+            asked = ASKED_FOR.get(ev.get("evidence_type", ""), "evidence")
+            events.append(_event("paypal", ev.get("date"), f"PayPal asked you for {asked}"))
+        elif source == "SUBMITTED_BY_SELLER":
+            action = (ev.get("action_info") or {}).get("action")
+            if action == "ACCEPT_CLAIM":
+                title = "You accepted the claim and refunded the buyer"
+            else:
+                tracking = ((ev.get("evidence_info") or {}).get("tracking_info") or [{}])[0]
+                title = "You sent evidence to PayPal" + (
+                    f": {tracking['carrier_name']} tracking {tracking['tracking_number']}"
+                    if tracking.get("tracking_number")
+                    else ""
+                )
+            events.append(
+                _event("you", ev.get("date"), title, (ev.get("notes") or "").strip() or None)
+            )
+    outcome = d.get("dispute_outcome")
+    if outcome:
+        how = OUTCOMES.get(outcome.get("outcome_code", ""), "")
+        refunded = outcome.get("amount_refunded")
+        title = "PayPal closed the case" + (f" {how}" if how else "")
+        if refunded:
+            title += f" ({money(refunded)} refunded)"
+        events.append(_event("paypal", d.get("update_time"), title))
+    return sorted(events, key=lambda e: e["time"] or "")
+
+
 def seller_transaction_ids(d: dict) -> list[str]:
     return [
         t["seller_transaction_id"]
@@ -188,6 +275,7 @@ def build_case(d: dict, trackers: list[dict] | None = None) -> DisputeCase:
             for t in trackers or []
             if t.get("shipment_direction", "FORWARD") == "FORWARD"
         ],
+        conversation=conversation(d),
         protection=next(
             (
                 PROTECTION[t["seller_protection_type"]]
