@@ -32,12 +32,15 @@ spread over several screens, and a seller without time.
 4. **Knows when not to fight.** No tracking on an "item not received" case, or no proof of
    what was shipped on a "not as described" case: it says so and offers a fair way out
    (refund now, or refund after return) instead of drafting an argument it cannot back up.
-5. **The seller approves.** Nothing reaches PayPal until the seller clicks, and only the
-   last *verified* reply can be sent.
-6. **An inbox built for the deadline.** Every case that needs a reply shows its reply-by date
+5. **Messages the buyer too.** A short note to the buyer ("your order shipped via USPS,
+   tracking 9400…"), written and verified the same way: every sentence cites PayPal
+   evidence. It is offered only where the evidence can actually help the buyer.
+6. **The seller approves.** Nothing reaches PayPal or the buyer until the seller clicks, and
+   only the last *verified* reply or message can be sent.
+7. **An inbox built for the deadline.** Every case that needs a reply shows its reply-by date
    in the seller's own time zone (amber at 5 days, red at 2), and the case panel shows the
    dispute's stage (Inquiry → Claim → Closed).
-7. **Insights.** Two charts a merchant acts on: *money at stake by reply deadline* and *money
+8. **Insights.** Two charts a merchant acts on: *money at stake by reply deadline* and *money
    by dispute reason*. Click a bar (or the link under it) to open exactly those disputes.
 
 ## For judges: a 2-minute tour
@@ -49,12 +52,13 @@ spread over several screens, and a seller without time.
    calendar, export what you see as CSV). The chart icon opens **Insights**.
 3. Click the **$49.99** case (`PP-R-FOD-10194708`), then **Draft reply**. Without a PIN you see
    a **replay of a real run**: the agent timeline, the Verifier's verdicts, the final reply.
-   Point at a sentence to light up the evidence it cites.
+   Point at a sentence to light up the evidence it cites. Below it, **Draft message**
+   replays a real, verified note to the buyer.
 4. Look at the other cases: one was **refunded** and one got a **return offer**, both sent
    from this app through PayPal's dispute API.
 5. **Live AI and sending:** click *Have a demo PIN? Unlock live AI* and use the PIN from the
    Devpost submission's private testing notes. Drafting then calls the real model, and
-   *Approve & send* posts the evidence to the PayPal sandbox.
+   *Approve & send* posts the evidence (or the message) to the PayPal sandbox.
 
 Everything is sandbox money and made-up customers. No real personal data is used.
 
@@ -69,8 +73,8 @@ flowchart LR
   WR -->|cited sentences| CK[Citation check<br/>plain code]
   CK --> VF[Verifier agent<br/>sees only cited facts]
   VF -->|unproven: one rewrite| WR
-  VF -->|verified reply| MR[Seller reviews<br/>and approves]
-  MR -->|provide-evidence| PP
+  VF -->|verified reply<br/>or buyer message| MR[Seller reviews<br/>and approves]
+  MR -->|provide-evidence /<br/>send-message| PP
   RS -->|seller confirms:<br/>accept-claim / make-offer| PP
 ```
 
@@ -82,8 +86,8 @@ The rules that keep it honest:
 - **Buyer statements are claims, never proof.** They are answered, not cited.
 - **Money-moving actions use fixed text written in code**, never AI text, and need the
   seller's confirmation.
-- **Only verified text can be sent**: the server keeps the last verified reply and sends
-  exactly that, once.
+- **Only verified text can be sent**: the server keeps the last verified reply (and, apart,
+  the last verified buyer message) and sends exactly that, once.
 - **Public demo costs nothing**: without the PIN, drafting replays a recorded real run and can
   never be sent; with the PIN, live drafts are capped per day.
 
@@ -92,7 +96,8 @@ The rules that keep it honest:
 Reads go through **PayPal's Agent Toolkit** (`paypal-agent-toolkit`): its dispute and
 shipment-tracking handlers list disputes, open one, and fetch its tracking, on a sandbox-only
 client. The actions the toolkit does not cover (or not in the shape a seller needs: refunding
-with `REFUND`, offering a refund after return, sending evidence) are direct REST calls.
+with `REFUND`, offering a refund after return, sending evidence, messaging the buyer) are
+direct REST calls.
 
 | PayPal API (sandbox) | Used for |
 |---|---|
@@ -100,6 +105,7 @@ with `REFUND`, offering a refund after return, sending evidence) are direct REST
 | `GET /v1/customer/disputes`, `GET /v1/customer/disputes/{id}` (Agent Toolkit) | Dispute list, case details, buyer messages, what PayPal asks for, stage, reply-by date |
 | `GET /v1/shipping/trackers` (Agent Toolkit) | Shipment tracking as evidence |
 | `POST /v1/customer/disputes/{id}/provide-evidence` | Sending the verified reply with proof of fulfillment |
+| `POST /v1/customer/disputes/{id}/send-message` | Sending the verified message to the buyer |
 | `POST /v1/customer/disputes/{id}/accept-claim` | "Refund the buyer now" |
 | `POST /v1/customer/disputes/{id}/make-offer` | "Offer refund after return" |
 | `POST /v1/shipping/trackers-batch` | Demo setup only (`scripts/add_tracking.py`): attach a tracking number like a seller would |
@@ -107,6 +113,7 @@ with `REFUND`, offering a refund after return, sending evidence) are direct REST
 ## How AI is used
 
 - **Microsoft Agent Framework** runs two agents on **gpt-5.4-mini** in **Microsoft Foundry**.
+  The Writer has two briefs: a reply to PayPal's reviewer, or a message to the buyer.
 - The **Writer** returns structured output (each sentence with the evidence ids it cites and
   the buyer claims it answers), so plain code can check every citation.
 - The **Verifier** gets each sentence with only its cited evidence and returns a verdict and a

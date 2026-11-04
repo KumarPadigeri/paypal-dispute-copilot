@@ -2,7 +2,7 @@
   "info": {
     "name": "Dispute Copilot API",
     "_postman_id": "8a1f8a1e-6c1b-4d5e-9a57-dispute-copilot",
-    "description": "The API behind Dispute Copilot (PayPal AI Hackathon 2026): AI drafts PayPal dispute replies where every sentence cites PayPal evidence, a Verifier removes anything unproven, and the merchant approves before anything is sent.\n\nEverything runs against the **PayPal sandbox** (fake money, made-up customers).\n\n**Folders**\n1. **Read**: no PIN. Lists disputes and opens one with its numbered evidence (facts written by code from PayPal data, never by the AI).\n2. **Draft**: the Writer \u2192 Verifier stream (server-sent events). Without a PIN it is a free replay of a real run.\n3. **Act**: needs the demo PIN and really changes the sandbox case: send the verified reply, refund now, or offer a refund after return.\n\n**Variables**: `baseUrl` (the live demo; use http://localhost:8000 locally), `disputeId` (a case to read), `actDisputeId` (a case you are willing to change; empty on purpose), `demoPin` (empty on purpose).",
+    "description": "The API behind Dispute Copilot (PayPal AI Hackathon 2026): AI drafts PayPal dispute replies where every sentence cites PayPal evidence, a Verifier removes anything unproven, and the merchant approves before anything is sent.\n\nEverything runs against the **PayPal sandbox** (fake money, made-up customers).\n\n**Folders**\n1. **Read**: no PIN. Lists disputes and opens one with its numbered evidence (facts written by code from PayPal data, never by the AI).\n2. **Draft**: the Writer → Verifier stream (server-sent events). Without a PIN it is a free replay of a real run.\n3. **Act**: needs the demo PIN and really changes the sandbox case: send the verified reply, refund now, or offer a refund after return.\n\n**Variables**: `baseUrl` (the live demo; use http://localhost:8000 locally), `disputeId` (a case to read), `actDisputeId` (a case you are willing to change; empty on purpose), `demoPin` (empty on purpose).",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -27,7 +27,7 @@
   ],
   "item": [
     {
-      "name": "1 \u00b7 Read (no PIN)",
+      "name": "1 · Read (no PIN)",
       "item": [
         {
           "name": "Health",
@@ -137,7 +137,7 @@
                 "{{disputeId}}"
               ]
             },
-            "description": "One dispute: the buyer's claims split into C1, C2 \u2026 and PayPal's facts as numbered evidence E1, E2 \u2026 (each with its source), plus advice when the evidence can't win."
+            "description": "One dispute: the buyer's claims split into C1, C2 … and PayPal's facts as numbered evidence E1, E2 … (each with its source), plus advice when the evidence can't win."
           },
           "event": [
             {
@@ -217,7 +217,7 @@
       ]
     },
     {
-      "name": "2 \u00b7 Draft",
+      "name": "2 · Draft",
       "item": [
         {
           "name": "Draft a reply (replay without PIN)",
@@ -236,7 +236,7 @@
                 "draft"
               ]
             },
-            "description": "Server-sent events: writing \u2192 draft \u2192 verifying \u2192 verdicts \u2192 (rewriting) \u2192 final. Every final sentence cites evidence ids and the claims it answers. Without a PIN this is a free replay of a real run and can never be sent."
+            "description": "Server-sent events: writing → draft → verifying → verdicts → (rewriting) → final. Every final sentence cites evidence ids and the claims it answers. Without a PIN this is a free replay of a real run and can never be sent."
           },
           "event": [
             {
@@ -291,6 +291,39 @@
           ]
         },
         {
+          "name": "Draft a message to the buyer (replay without PIN)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/disputes/{{disputeId}}/message-draft",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "disputes",
+                "{{disputeId}}",
+                "message-draft"
+              ]
+            },
+            "description": "A short note to the buyer, on the same Writer → Verifier stream: every sentence cites evidence ids. No closing request to PayPal. Without a PIN this is a free replay of a real run and can never be sent. Refused (an error event) on cases where the evidence can't help, such as no tracking."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "pm.test('event stream', () => pm.expect(pm.response.headers.get('Content-Type')).to.include('text/event-stream'));",
+                  "pm.test('ends with a verified message', () => pm.expect(pm.response.text()).to.include('event: final'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
           "name": "Check a PIN",
           "request": {
             "method": "POST",
@@ -338,7 +371,7 @@
       ]
     },
     {
-      "name": "3 \u00b7 Act (PIN; changes the sandbox case)",
+      "name": "3 · Act (PIN; changes the sandbox case)",
       "description": "Each of these really changes the PayPal sandbox case in `actDisputeId`. Set it to a case you are willing to change.",
       "item": [
         {
@@ -365,6 +398,43 @@
               ]
             },
             "description": "The merchant's approval: sends the last VERIFIED reply (never browser-typed text) plus the tracking number as proof of shipping (PayPal provide-evidence). Draft that case live first."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('sent, or a clear refusal', () => pm.expect([200, 403, 409, 502]).to.include(pm.response.code));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Send the verified message to the buyer",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Demo-Pin",
+                "value": "{{demoPin}}",
+                "description": "The demo PIN (in the Devpost testing notes). Never saved in this file."
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/disputes/{{actDisputeId}}/message",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "disputes",
+                "{{actDisputeId}}",
+                "message"
+              ]
+            },
+            "description": "The merchant's approval: sends the last VERIFIED buyer message (never browser-typed text) through PayPal send-message. Draft a message on that case live first. A verified reply can't be sent as a message, or the other way round."
           },
           "event": [
             {

@@ -9,8 +9,8 @@ For a local server, set the collection variable `baseUrl` to `http://localhost:8
 | Folder | Needs | What it does |
 |---|---|---|
 | 1 · Read | nothing | Health, PayPal's reasons, the dispute list, one case with its numbered evidence, a 404 for an unknown case, demo status |
-| 2 · Draft | nothing (replay) or `demoPin` (live AI) | The Writer → Verifier stream as server-sent events |
-| 3 · Act | `demoPin` and `actDisputeId` | Really changes that sandbox case: send the verified reply, refund now, or offer a refund after return |
+| 2 · Draft | nothing (replay) or `demoPin` (live AI) | The Writer → Verifier stream as server-sent events, for a reply or a message to the buyer |
+| 3 · Act | `demoPin` and `actDisputeId` | Really changes that sandbox case: send the verified reply or buyer message, refund now, or offer a refund after return |
 
 `demoPin` and `actDisputeId` are empty on purpose, so nothing is changed by accident. The one
 request in Act that runs without them uses a case id that doesn't exist.
