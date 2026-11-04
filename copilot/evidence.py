@@ -152,8 +152,9 @@ OUTCOMES = {
 }
 
 
-def _event(who: str, time: str | None, title: str, text: str | None = None) -> dict:
-    return {"who": who, "time": time, "title": title, "text": text}
+def _event(who: str, time: str | None, title: str, text: str | None = None, kind="action") -> dict:
+    """kind: "message" (a chat line), "action" (an offer, evidence, a refund) or "note" (PayPal)."""
+    return {"who": who, "time": time, "title": title, "text": text, "kind": kind}
 
 
 def conversation(d: dict) -> list[dict]:
@@ -173,6 +174,7 @@ def conversation(d: dict) -> list[dict]:
                 m.get("time_posted"),
                 "Buyer opened the case" if first_buyer else "Buyer wrote",
                 text,
+                "message",
             )
             e["opening"] = first_buyer
             first_buyer = False
@@ -185,7 +187,7 @@ def conversation(d: dict) -> list[dict]:
                 if offer
                 else "You messaged the buyer"
             )
-            e = _event("you", m.get("time_posted"), title, text)
+            e = _event("you", m.get("time_posted"), title, text, "action" if offer else "message")
         events.append(e)
     for o in offers.values():  # offer events with no message of their own (e.g. the buyer's answer)
         who = "buyer" if o.get("actor") == "BUYER" else "you"
@@ -198,7 +200,9 @@ def conversation(d: dict) -> list[dict]:
         source = ev.get("source")
         if source == "REQUESTED_FROM_SELLER":
             asked = ASKED_FOR.get(ev.get("evidence_type", ""), "evidence")
-            events.append(_event("paypal", ev.get("date"), f"PayPal asked you for {asked}"))
+            events.append(
+                _event("paypal", ev.get("date"), f"PayPal asked you for {asked}", kind="note")
+            )
         elif source == "SUBMITTED_BY_SELLER":
             action = (ev.get("action_info") or {}).get("action")
             if action == "ACCEPT_CLAIM":
@@ -220,7 +224,7 @@ def conversation(d: dict) -> list[dict]:
         title = "PayPal closed the case" + (f" {how}" if how else "")
         if refunded:
             title += f" ({money(refunded)} refunded)"
-        events.append(_event("paypal", d.get("update_time"), title))
+        events.append(_event("paypal", d.get("update_time"), title, kind="note"))
     return sorted(events, key=lambda e: e["time"] or "")
 
 

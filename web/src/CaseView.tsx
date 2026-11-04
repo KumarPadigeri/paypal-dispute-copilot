@@ -155,20 +155,24 @@ export default function CaseView({ id, onClose }: { id: string; onClose: () => v
               onSent={changed}
             />
 
-            {canMessage && (
-              <DraftPanel
-                kind="message"
-                disputeId={c.dispute_id}
-                evidence={c.evidence}
-                canSend={canMessage}
-                cantSendReason={null}
-                draftBlocked={false}
-                onFocus={setFocus}
-                onSent={changed}
-              />
-            )}
-
-            <Conversation c={c} />
+            {/* messaging the buyer happens at the bottom of the conversation, like a chat */}
+            <Conversation
+              c={c}
+              composer={
+                canMessage && (
+                  <DraftPanel
+                    kind="message"
+                    disputeId={c.dispute_id}
+                    evidence={c.evidence}
+                    canSend={canMessage}
+                    cantSendReason={null}
+                    draftBlocked={false}
+                    onFocus={setFocus}
+                    onSent={changed}
+                  />
+                )
+              }
+            />
           </div>
 
           <section className="panel evidence-panel">

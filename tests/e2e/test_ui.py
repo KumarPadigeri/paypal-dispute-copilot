@@ -109,12 +109,13 @@ def test_without_pin_draft_is_a_replay_and_cannot_be_sent(page: Page):
 
 def test_message_to_the_buyer_is_a_cited_replay_without_pin(page: Page):
     page.goto("/#/case/PP-R-FOD-10194708")
-    panel = page.locator(".panel.draft", has_text="Message the buyer")
+    panel = page.locator(".panel.conversation .chat-composer")
     draft = panel.get_by_role("button", name="Draft message")
     expect(draft).to_have_class("btn")  # the reply stays the blue, main task
     draft.click()
     expect(panel.get_by_text("Verified message ready for your review")).to_be_visible(timeout=15000)
     expect(panel.locator(".sentence").first).to_contain_text("tracking number")
+    expect(panel.locator(".reply.bubble-draft")).to_be_visible()  # drawn as your next chat bubble
     panel.locator(".sentence").first.hover()
     expect(page.locator(".evidence-panel .item.lit").first).to_be_visible()
     expect(panel.get_by_role("button", name="Approve & send to buyer")).to_be_disabled()
@@ -629,13 +630,16 @@ def test_agent_stepper_shows_every_step_done_after_a_draft(page: Page):
     expect(steps.locator(".stage", has_text="Ready")).to_have_class(re.compile(r"\bdone\b"))
 
 
-def test_conversation_shows_who_did_what_and_points_to_the_claims(page: Page):
+def test_conversation_is_a_chat_with_the_message_composer_at_the_bottom(page: Page):
     page.goto("/#/case/PP-R-FOD-10194708")
-    convo = page.locator(".convo")
-    expect(convo.locator(".convo-item")).to_have_count(2)
-    first = convo.locator(".convo-item").first
-    expect(first.locator(".convo-who")).to_have_text("Buyer")
-    expect(first).to_contain_text("Their message is above, as C1–C4.")
-    expect(convo.locator(".convo-item").nth(1)).to_contain_text(
-        "PayPal asked you for proof of shipping"
-    )
+    chat = page.get_by_role("list", name="Conversation, oldest first")
+    buyer = chat.locator(".chat-line.buyer")
+    expect(buyer).to_have_count(1)
+    expect(buyer.locator(".chat-meta")).to_contain_text("Buyer")
+    expect(buyer).to_contain_text("Their message is above, as C1–C4.")
+    expect(chat.locator(".chat-note")).to_contain_text("PayPal asked you for proof of shipping")
+    # the composer belongs to the conversation card, under the thread
+    card = page.locator(".panel.conversation")
+    expect(
+        card.locator(".chat-composer").get_by_role("button", name="Draft message")
+    ).to_be_visible()

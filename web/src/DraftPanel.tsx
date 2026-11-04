@@ -28,7 +28,7 @@ const WORDS = {
   },
   message: {
     noun: 'message',
-    title: 'Message the buyer',
+    title: 'Write to the buyer',
     intro:
       'A short note to the buyer, such as where their parcel is. Same rule: every sentence cites PayPal evidence, the Verifier checks it, and you approve before it goes.',
     send: 'Approve & send to buyer',
@@ -99,6 +99,7 @@ export default function DraftPanel({
   const [unlocked, setUnlocked] = useState(() => demoPin() !== null)
   const stop = useRef<(() => void) | null>(null)
   const words = WORDS[kind]
+  const Wrapper = kind === 'message' ? 'div' : 'section'
 
   useEffect(() => () => stop.current?.(), [])
   useEffect(() => {
@@ -142,6 +143,11 @@ export default function DraftPanel({
     try {
       const r = await sendReply(disputeId, kind)
       setSendState({ ok: true, text: `Sent. ${statusOf(r.status).detail}.` })
+      if (kind === 'message') {
+        // the sent message now shows as your bubble in the conversation; the composer is free again
+        setFinal(null)
+        setSteps([])
+      }
       onSent()
     } catch (err) {
       setSendState({ ok: false, text: `Not sent: ${(err as Error).message}` })
@@ -149,7 +155,8 @@ export default function DraftPanel({
   }
 
   return (
-    <section className="panel draft">
+    // The reply is a card of its own; the message composer sits inside the conversation card
+    <Wrapper className={kind === 'message' ? 'composer draft' : 'panel draft'}>
       <div className="draft-head">
         <h3 className="section-title">{words.title}</h3>
         {/* Blue while drafting the reply is the next step; once a draft exists, sending is. The
@@ -179,6 +186,7 @@ export default function DraftPanel({
       )}
 
       {steps.length === 0 && !draftBlocked && <p className="meta">{words.intro}</p>}
+      {!final && sendState && <p className={sendState.ok ? 'send-ok' : 'send-bad'}>{sendState.text}</p>}
 
       {/* where the agents are, and what comes next; the log below says what each step found */}
       {steps.length > 0 && <AgentSteps progress={progress} />}
@@ -201,7 +209,8 @@ export default function DraftPanel({
 
       {final && (
         <>
-          <div className="reply" onMouseLeave={() => focus(null)}>
+          {/* a message is drawn as your next chat bubble, not yet sent */}
+          <div className={kind === 'message' ? 'reply bubble-draft' : 'reply'} onMouseLeave={() => focus(null)}>
             {final.sentences.map((s, i) => (
               <button
                 key={i}
@@ -272,7 +281,7 @@ export default function DraftPanel({
           </div>
         </>
       )}
-    </section>
+    </Wrapper>
   )
 }
 

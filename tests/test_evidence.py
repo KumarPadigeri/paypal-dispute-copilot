@@ -158,6 +158,7 @@ def test_conversation_lists_buyer_seller_and_paypal_in_time_order():
         ("paypal", "PayPal closed the case in the buyer's favor (64.00 USD refunded)"),
     ]
     assert events[0]["opening"] is True and events[4]["opening"] is False
+    assert [e["kind"] for e in events] == ["message", "note", "action", "action", "message", "note"]
     assert events[2]["text"] == "Shipped via UPS."
     # the buyer's own copy of their opening message (SUBMITTED_BY_BUYER) is not listed twice
     assert sum(e["who"] == "buyer" for e in events) == 2

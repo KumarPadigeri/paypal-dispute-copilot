@@ -503,65 +503,87 @@ button {
   color: var(--faint);
 }
 
-/* Conversation: who (a small tag), what and when, oldest first; a line joins the entries */
-.convo {
+/* Conversation as a chat: the buyer on the left, you on the right, PayPal's events as small
+   centred notes; the message composer sits under a rule at the bottom */
+.chat {
   list-style: none;
   margin: 0;
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 12px;
 }
 
-.convo-item {
-  display: grid;
-  grid-template-columns: 64px minmax(0, 1fr);
-  gap: 10px;
-  align-items: start;
-}
-
-.convo-who {
-  justify-self: start;
-  padding: 1px 8px;
-  border-radius: 999px;
-  font-size: 11.5px;
-  font-weight: 600;
-  color: var(--muted);
-  background: var(--surface-2);
-}
-
-.convo-who.you {
-  color: var(--accent);
-  background: var(--accent-soft);
-}
-
-.convo-who.paypal {
-  color: var(--text);
-  background: var(--surface-2);
-  border: 1px solid var(--border);
-}
-
-.convo-body {
+.chat-line {
   display: flex;
   flex-direction: column;
-  gap: 2px;
-  min-width: 0;
+  align-items: flex-start;
+  gap: 3px;
+  max-width: 85%;
 }
 
-.convo-title {
-  font-size: 14px;
-  font-weight: 600;
+.chat-line.you {
+  align-self: flex-end;
+  align-items: flex-end;
 }
 
-.convo-time {
+.chat-meta {
   font-size: 12px;
   color: var(--faint);
 }
 
-.convo-text {
-  margin-top: 4px;
-  font-size: 13.5px;
+.bubble {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 9px 13px;
+  border-radius: 14px 14px 14px 4px;
+  background: var(--surface-2);
+  font-size: 14px;
+  line-height: 1.5;
   overflow-wrap: anywhere;
+}
+
+.chat-line.you .bubble {
+  border-radius: 14px 14px 4px 14px;
+  background: var(--accent-soft);
+}
+
+.bubble-title {
+  font-weight: 600;
+}
+
+.chat-note {
+  align-self: center;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 2px 8px;
+  padding: 4px 12px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  font-size: 12.5px;
+  color: var(--muted);
+  text-align: center;
+}
+
+.chat-time {
+  color: var(--faint);
+}
+
+.chat-composer {
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+}
+
+/* the drafted message: your next bubble, outlined until it is sent */
+.reply.bubble-draft {
+  margin-left: auto;
+  max-width: 85%;
+  border-radius: 14px 14px 4px 14px;
+  border: 1px dashed var(--accent);
+  background: var(--surface);
 }
 
 /* The draft panel's agent stepper: the stage stepper's look, left-aligned, wrapping in a
