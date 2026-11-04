@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import ColumnsMenu from './ColumnsMenu'
 import DayFilter from './DayFilter'
 import { CloseIcon } from './icons'
 import {
@@ -24,7 +23,6 @@ import {
   themeQuartz,
   type ColDef,
   type GridApi,
-  type GridState,
   type ICellRendererParams,
   type IFilter,
 } from 'ag-grid-community'
@@ -33,6 +31,7 @@ import Deadline from './Deadline'
 import StatusPill from './StatusPill'
 import { type DisputeSummary, formatAgo, formatDate, formatDateTime, formatMoney } from './api'
 import { dueOf } from './due'
+import { CLEAR_COL, savedLayout, saveLayout } from './gridLayout'
 import { GROUPS, statusOf } from './status'
 
 // Only free (Community) features: sorting, resizable and draggable columns, column filters, quick
@@ -57,28 +56,6 @@ ModuleRegistry.registerModules([
   HighlightChangesModule, // a status cell flashes when PayPal reports a change
   ...(import.meta.env.DEV ? [ValidationModule] : []),
 ])
-
-// The seller's column order, widths, pinning, sort and hidden columns, remembered in this browser
-const STATE_KEY = 'gridLayout'
-const CLEAR_COL = 'clearFilters'
-function savedLayout(): GridState | undefined {
-  try {
-    return JSON.parse(localStorage.getItem(STATE_KEY) ?? 'null') ?? undefined
-  } catch {
-    return undefined
-  }
-}
-function saveLayout(state: GridState) {
-  const { columnOrder, columnSizing, columnPinning, sort, columnVisibility } = state
-  try {
-    localStorage.setItem(
-      STATE_KEY,
-      JSON.stringify({ columnOrder, columnSizing, columnPinning, sort, columnVisibility }),
-    )
-  } catch {
-    /* private mode: layout lasts this visit only */
-  }
-}
 
 // The totals row: how many disputes the filters leave and the money in them (one currency only)
 type Total = DisputeSummary & { count: number }
@@ -296,7 +273,7 @@ type Props = {
   openId: string | null
   onOpen: (id: string) => void
   onCount: (shown: number) => void // rows left after the grid's own column filters
-  onReady: (exportCsv: () => void) => void
+  onReady: (exportCsv: () => void, api: GridApi<DisputeSummary>) => void
 }
 
 export default function DisputeGrid({ items, reasons, search, page, pageSize, openId, onOpen, onCount, onReady }: Props) {
@@ -320,21 +297,7 @@ export default function DisputeGrid({ items, reasons, search, page, pageSize, op
     () => [
       {
         colId: CLEAR_COL,
-        headerName: 'Columns',
-        // the top-left corner: show or hide columns, reset the layout
-        headerComponent: ColumnsMenu,
-        headerComponentParams: {
-          fixed: [CLEAR_COL, 'id'],
-          onReset: () => {
-            api.current?.resetColumnState()
-            try {
-              localStorage.removeItem(STATE_KEY)
-            } catch {
-              /* nothing saved */
-            }
-          },
-        },
-        suppressHeaderKeyboardEvent: (p) => p.event.key === 'Enter' || p.event.key === ' ',
+        headerName: 'Clear filters', // read by screen readers; hidden on screen (see index.css)
         width: 44,
         minWidth: 44,
         maxWidth: 44,
@@ -501,6 +464,7 @@ export default function DisputeGrid({ items, reasons, search, page, pageSize, op
               columnKeys: e.api.getAllDisplayedColumns().filter((c) => c.getColId() !== CLEAR_COL),
               skipPinnedBottom: true, // the totals row is for the screen
             }),
+            e.api,
           )
         }}
         onFilterChanged={recount}

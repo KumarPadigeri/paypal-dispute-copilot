@@ -1,16 +1,16 @@
 import { useEffect, useReducer, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import type { Column, IHeaderParams } from 'ag-grid-community'
+import type { Column, GridApi } from 'ag-grid-community'
 import { ColumnsIcon } from './icons'
+import { FIXED_COLS, resetLayout } from './gridLayout'
 import { usePopup } from './popup'
 
 /**
- * The grid's top-left corner: a button that opens a list of columns to show or hide, and
- * "Reset layout" (order, widths, sort and hidden columns back to the defaults).
- * `fixed` columns (the case id, the corner itself) always stay.
+ * In the list toolbar while the grid shows: a button that opens a list of columns to show or hide,
+ * and "Reset layout" (order, widths, sort and hidden columns back to the defaults).
+ * The case id always stays.
  */
-export default function ColumnsMenu(props: IHeaderParams & { fixed: string[]; onReset: () => void }) {
-  const { api, fixed, onReset } = props
+export default function ColumnsMenu({ api }: { api: GridApi }) {
   const [open, setOpen] = useState(false)
   const button = useRef<HTMLButtonElement>(null)
   const popup = useRef<HTMLDivElement>(null)
@@ -23,20 +23,7 @@ export default function ColumnsMenu(props: IHeaderParams & { fixed: string[]; on
     return () => events.forEach((e) => api.removeEventListener(e, redraw))
   }, [api])
 
-  // Keyboard: the grid focuses the header cell itself, so Enter or Space there opens the menu
-  useEffect(() => {
-    const cell = props.eGridHeader
-    const onKey = (e: KeyboardEvent) => {
-      if (e.target === cell && (e.key === 'Enter' || e.key === ' ')) {
-        e.preventDefault()
-        setOpen(true)
-      }
-    }
-    cell.addEventListener('keydown', onKey)
-    return () => cell.removeEventListener('keydown', onKey)
-  }, [props.eGridHeader])
-
-  const columns = (api.getAllGridColumns() ?? []).filter((c: Column) => !fixed.includes(c.getColId()))
+  const columns = (api.getAllGridColumns() ?? []).filter((c: Column) => !FIXED_COLS.includes(c.getColId()))
   const shown = columns.filter((c) => c.isVisible()).length
 
   return (
@@ -44,10 +31,10 @@ export default function ColumnsMenu(props: IHeaderParams & { fixed: string[]; on
       <button
         ref={button}
         type="button"
-        className="icon-btn small grid-columns"
+        className="icon-btn"
         aria-label="Show or hide columns"
         data-tip="Columns"
-        data-tip-align="start"
+        data-tip-align="end"
         aria-haspopup="dialog"
         aria-expanded={open}
         onClick={() => setOpen((o) => !o)}
@@ -68,7 +55,10 @@ export default function ColumnsMenu(props: IHeaderParams & { fixed: string[]; on
                     checked={c.isVisible()}
                     // keep at least one column besides the case id
                     disabled={c.isVisible() && shown === 1}
-                    onChange={(e) => api.setColumnsVisible([c], e.target.checked)}
+                    onChange={(e) => {
+                      api.setColumnsVisible([c], e.target.checked)
+                      redraw() // the grid applies it at once; redraw now, so the box never flips back
+                    }}
                   />
                   {c.getColDef().headerName}
                 </label>
@@ -78,7 +68,7 @@ export default function ColumnsMenu(props: IHeaderParams & { fixed: string[]; on
               type="button"
               className="btn columns-reset"
               onClick={() => {
-                onReset()
+                resetLayout(api)
                 setOpen(false)
                 button.current?.focus()
               }}

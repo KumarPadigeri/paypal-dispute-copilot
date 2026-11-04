@@ -8,7 +8,7 @@ export default function ViewToggle({ view, onChange }: { view: View; onChange: (
   const label = next === 'grid' ? 'Card View' : 'Grid View'
   return (
     // Icon-only, so it says what it does on hover and keyboard focus
-    <button className="icon-btn" onClick={() => onChange(next)} aria-label={label} data-tip={label}>
+    <button className="icon-btn" onClick={() => onChange(next)} aria-label={label} data-tip={label} data-tip-align="end">
       {next === 'grid' ? <GridIcon /> : <ListIcon />}
     </button>
   )

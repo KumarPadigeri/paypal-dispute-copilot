@@ -1,4 +1,5 @@
 import { lazy, Suspense, useEffect, useRef, useState } from 'react'
+import type { GridApi } from 'ag-grid-community'
 import {
   DISPUTES_CHANGED,
   type DisputeSummary,
@@ -151,10 +152,12 @@ type Props = {
   openId: string | null
   asTable: boolean
   onOpen: (id: string) => void
-  onExport: (exportCsv: (() => void) | null) => void // the header's export button, while the grid shows
+  onExport: (exportCsv: (() => void) | null) => void // hands up the export for the toolbar's button
+  onGrid: (api: GridApi | null) => void // the grid, while it shows (for the toolbar's Columns menu)
+  actions: React.ReactNode // the list's tools (columns, export, card or grid view), beside the chips
 }
 
-export default function DisputeList({ openId, asTable, onOpen, onExport }: Props) {
+export default function DisputeList({ openId, asTable, onOpen, onExport, onGrid, actions }: Props) {
   const [disputes, setDisputes] = useState<DisputeSummary[] | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [picked, setPicked] = useState<Group[]>([]) // status chips that are on
@@ -183,8 +186,11 @@ export default function DisputeList({ openId, asTable, onOpen, onExport }: Props
   // Export: the grid hands up AG Grid's own export; cards export what the chips and search leave
   const cardRows = useRef<DisputeSummary[]>([])
   useEffect(() => {
-    if (!asTable) onExport(() => downloadCsv(cardRows.current))
-  }, [asTable, onExport])
+    if (asTable) return
+    onExport(() => downloadCsv(cardRows.current))
+    onGrid(null)
+  }, [asTable, onExport, onGrid])
+  useEffect(() => () => onGrid(null), [onGrid]) // leaving the list (Insights) drops the grid too
 
   useEffect(() => {
     const load = () =>
@@ -230,25 +236,28 @@ export default function DisputeList({ openId, asTable, onOpen, onExport }: Props
     <>
       {!openId && <Welcome first={disputes.find((d) => statusOf(d.status).group === 'reply')} onOpen={onOpen} />}
       {!openId && <Dashboard disputes={disputes} />}
-      {/* Status chips, then a full-width search under them */}
+      {/* Status chips (centred) with the list's tools at the right, then a full-width search */}
       <div className="filters">
-        <div className="chips" role="group" aria-label="Filter by status">
-          {FILTERS.map((g) => {
-            const group = GROUPS[g]
-            const on = picked.includes(g)
-            return (
-              <button
-                key={g}
-                className={`chip tone-${group.tone} ${on ? 'on' : ''}`}
-                aria-pressed={on}
-                onClick={() => toggle(g)}
-              >
-                <group.Icon />
-                {group.label}
-                <span className="count">{disputes.filter((d) => matches([g], d)).length}</span>
-              </button>
-            )
-          })}
+        <div className="filters-bar">
+          <div className="chips" role="group" aria-label="Filter by status">
+            {FILTERS.map((g) => {
+              const group = GROUPS[g]
+              const on = picked.includes(g)
+              return (
+                <button
+                  key={g}
+                  className={`chip tone-${group.tone} ${on ? 'on' : ''}`}
+                  aria-pressed={on}
+                  onClick={() => toggle(g)}
+                >
+                  <group.Icon />
+                  {group.label}
+                  <span className="count">{disputes.filter((d) => matches([g], d)).length}</span>
+                </button>
+              )
+            })}
+          </div>
+          <div className="list-actions">{actions}</div>
         </div>
         <label className="search">
           <SearchIcon />
@@ -336,7 +345,10 @@ export default function DisputeList({ openId, asTable, onOpen, onExport }: Props
                 setGridCount(n)
                 setPage(1)
               }}
-              onReady={onExport}
+              onReady={(exportCsv, api) => {
+                onExport(exportCsv)
+                onGrid(api)
+              }}
             />
             </Suspense>
           ) : (

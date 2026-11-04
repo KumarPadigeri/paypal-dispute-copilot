@@ -1,5 +1,7 @@
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react'
+import type { GridApi } from 'ag-grid-community'
 import CaseView from './CaseView'
+import ColumnsMenu from './ColumnsMenu'
 import DisputeList from './DisputeList'
 import Splitter, { LIST_DEFAULT } from './Splitter'
 import ThemeToggle from './ThemeToggle'
@@ -50,6 +52,7 @@ export default function App() {
   // The grid hands up its CSV export while it is on screen (wrapped: setState would call a bare function)
   const [exportCsv, setExportCsv] = useState<(() => void) | null>(null)
   const onExport = useCallback((fn: (() => void) | null) => setExportCsv(() => fn), [])
+  const [gridApi, setGridApi] = useState<GridApi | null>(null) // the grid, while it shows
 
   useEffect(() => {
     const onHash = () => {
@@ -103,12 +106,6 @@ export default function App() {
         >
           <ChartIcon />
         </a>
-        {!insights && exportCsv && (
-          <button className="icon-btn" onClick={exportCsv} aria-label="Export CSV" data-tip="Export CSV">
-            <DownloadIcon />
-          </button>
-        )}
-        {!insights && tableFits && <ViewToggle view={view} onChange={setView} />}
         <ThemeToggle />
       </header>
       {/* No case open: list uses the full width. Case open: list left, case panel right
@@ -137,6 +134,25 @@ export default function App() {
               openId={openId}
               asTable={tableFits && view === 'list'}
               onExport={onExport}
+              onGrid={setGridApi}
+              // the list's own tools sit beside its status chips
+              actions={
+                <>
+                  {gridApi && <ColumnsMenu api={gridApi} />}
+                  {exportCsv && (
+                    <button
+                      className="icon-btn"
+                      onClick={exportCsv}
+                      aria-label="Export CSV"
+                      data-tip="Export CSV"
+                      data-tip-align="end"
+                    >
+                      <DownloadIcon />
+                    </button>
+                  )}
+                  {tableFits && <ViewToggle view={view} onChange={setView} />}
+                </>
+              }
               onOpen={(id) => (location.hash = `/case/${encodeURIComponent(id)}`)}
             />
           </section>
