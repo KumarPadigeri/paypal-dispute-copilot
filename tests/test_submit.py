@@ -44,7 +44,6 @@ def test_unknown_carrier_is_sent_as_other():
 @pytest.mark.parametrize(
     "change, reply, message",
     [
-        ({"status": "RESOLVED"}, REPLY, "not waiting for the seller"),
         ({"actions": ["send_message"]}, REPLY, "does not allow providing evidence"),
         ({}, "   ", "reply is empty"),
         ({}, "x" * 2001, "PayPal allows 2000"),
@@ -71,3 +70,9 @@ def test_message_is_not_sent_when_a_check_fails(change, text, message):
 
 def test_message_needs_no_tracking():
     check_message(replace(case(), shipments=[]), REPLY)  # no error
+
+
+def test_evidence_follows_what_paypal_allows_not_the_status():
+    # a message to the buyer moved the case on, but PayPal still lists provide_evidence
+    [ev] = build_evidences(replace(case(), status="WAITING_FOR_BUYER_RESPONSE"), REPLY)
+    assert ev["notes"] == REPLY

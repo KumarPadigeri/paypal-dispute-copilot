@@ -36,11 +36,10 @@ type Props = {
  * The case's two conversations, from PayPal's own records, as tabs: you and PayPal (what it asked
  * for, the evidence and refunds you sent it, its decision), and you and the buyer (messages and
  * offers). Each is a chat, with its composer at the bottom. Both stay mounted, so a draft survives
- * switching tabs. It opens on PayPal while PayPal waits for your reply.
+ * switching tabs. It opens on PayPal while PayPal allows a reply.
  */
 export default function Conversations({ c, reply, message }: Props) {
-  const waiting = c.status === 'WAITING_FOR_SELLER_RESPONSE'
-  const [tab, setTab] = useState<Channel>(waiting ? 'paypal' : 'buyer')
+  const [tab, setTab] = useState<Channel>(c.actions.includes('provide_evidence') ? 'paypal' : 'buyer')
   // Public demo: one PIN form above both tabs (it unlocks live AI and sending in either)
   const [pinRequired, setPinRequired] = useState(false)
   const [unlocked, setUnlocked] = useState(() => demoPin() !== null)

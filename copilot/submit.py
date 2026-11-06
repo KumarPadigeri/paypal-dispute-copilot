@@ -17,8 +17,8 @@ class NotSendable(Exception):
 
 
 def check_sendable(case: DisputeCase, reply: str) -> None:
-    if case.status != "WAITING_FOR_SELLER_RESPONSE":
-        raise NotSendable(f"PayPal is not waiting for the seller (status: {case.status})")
+    # What PayPal allows right now decides, not the status name: messaging the buyer can move a
+    # case out of "waiting for seller" while evidence is still allowed.
     if "provide_evidence" not in case.actions:
         raise NotSendable("PayPal does not allow providing evidence on this case right now")
     if not reply.strip():

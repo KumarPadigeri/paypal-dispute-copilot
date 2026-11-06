@@ -664,3 +664,17 @@ def test_conversations_are_two_tabs_each_a_chat_with_its_composer(page: Page):
     expect(buyer_tab.get_by_role("img", name="new message")).to_have_count(0)  # now seen
     page.reload()
     expect(page.get_by_role("tab", name="With the buyer").get_by_role("img")).to_have_count(0)
+
+
+def test_reply_stays_open_after_the_status_moves_while_paypal_allows_it(page: Page):
+    def moved_on(route):
+        r = route.fetch()
+        route.fulfill(response=r, json={**r.json(), "status": "WAITING_FOR_BUYER_RESPONSE"})
+
+    page.route("**/api/disputes/PP-R-FOD-10194708", moved_on)
+    page.goto("/#/case/PP-R-FOD-10194708")
+    expect(page.get_by_role("tab", name="With PayPal")).to_have_attribute("aria-selected", "true")
+    page.get_by_role("button", name="Draft reply").click()
+    expect(page.get_by_text("Verified reply ready for your review")).to_be_visible(timeout=15000)
+    expect(page.get_by_text("Replays can't be sent.")).to_be_visible()  # the only thing stopping it
+    expect(page.get_by_text("doesn't allow a reply")).to_have_count(0)
