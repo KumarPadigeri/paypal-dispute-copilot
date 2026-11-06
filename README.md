@@ -3,7 +3,7 @@
 **AI that answers PayPal disputes for small sellers, where every sentence links to its proof.**
 
 [![CI](https://github.com/KumarPadigeri/paypal-dispute-copilot/actions/workflows/ci.yml/badge.svg)](https://github.com/KumarPadigeri/paypal-dispute-copilot/actions/workflows/ci.yml)
-· **Live demo: https://dispute-copilot-zi8a.onrender.com/** · Built for the
+· **Live demo: https://dispute-copilot-zi8a.onrender.com/** · **[Demo video](https://youtu.be/ICAm8-CtHpg)** · Built for the
 [PayPal AI Hackathon 2026](https://paypalaihackathon.devpost.com/) · PayPal sandbox only
 
 ![Dispute Copilot: a dispute with PayPal evidence and a verified reply whose sentences cite it](docs/screenshot.png)
@@ -37,23 +37,27 @@ spread over several screens, and a seller without time.
    evidence. It is offered only where the evidence can actually help the buyer.
 6. **The seller approves.** Nothing reaches PayPal or the buyer until the seller clicks, and
    only the last *verified* reply or message can be sent.
-7. **An inbox built for the deadline.** Every case that needs a reply shows its reply-by date
+7. **Two conversations on every case.** *With PayPal* (what it asked for, what you sent, what
+   it decided) and *With the buyer* (messages and offers), built from PayPal's own records, each
+   with its composer at the bottom. A plain-code check says up front whether PayPal's records
+   hold what it asks for, and a live stepper shows the agents at work.
+8. **An inbox built for the deadline.** Every case that needs a reply shows its reply-by date
    in the seller's own time zone (amber at 5 days, red at 2), and the case panel shows the
    dispute's stage (Inquiry → Claim → Closed).
-8. **Insights.** Two charts a merchant acts on: *money at stake by reply deadline* and *money
+9. **Insights.** Two charts a merchant acts on: *money at stake by reply deadline* and *money
    by dispute reason*. Click a bar (or the link under it) to open exactly those disputes.
 
 ## For judges: a 2-minute tour
 
 1. Open the **[live demo](https://dispute-copilot-zi8a.onrender.com/)**. It runs on Render's
    free plan: if it has been idle, the first load can take about a minute.
-2. The inbox opens on cards; the list icon in the header switches to the **grid** (AG Grid:
-   sort any column, drag and resize columns, type in the filter row, pick dates from a
-   calendar, export what you see as CSV). The chart icon opens **Insights**.
+2. The inbox opens on cards; the list icon beside the status chips switches to the **grid** (AG Grid:
+   sort any column, drag, resize or hide columns, type in the filter row, pick dates from a
+   calendar, watch the totals row follow, export what you see as CSV). The **Insights** tab opens the charts.
 3. Click the **$49.99** case (`PP-R-FOD-10194708`), then **Draft reply**. Without a PIN you see
    a **replay of a real run**: the agent timeline, the Verifier's verdicts, the final reply.
-   Point at a sentence to light up the evidence it cites. Below it, **Draft message**
-   replays a real, verified note to the buyer.
+   Point at a sentence to light up the evidence it cites. The **With the buyer** tab's
+   **Draft message** replays a real, verified note to the buyer.
 4. Look at the other cases: one was **refunded** and one got a **return offer**, both sent
    from this app through PayPal's dispute API.
 5. **Live AI and sending:** click *Have a demo PIN? Unlock live AI* and use the PIN from the
